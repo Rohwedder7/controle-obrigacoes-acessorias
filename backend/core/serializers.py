@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import State, Company, ObligationType, Obligation, Submission, AuditLog, Notification
+from .models import State, Company, ObligationType, Obligation, Submission, AuditLog, Notification, Dispatch, DispatchSubtask
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -180,3 +180,71 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
         fields = ['id','user','action','model','object_id','timestamp','changes']
+
+class DispatchSubtaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DispatchSubtask
+        fields = ['id', 'name', 'status', 'order', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
+    
+    def validate(self, data):
+        # Validar status
+        if 'status' in data:
+            valid_statuses = ['NAO_INICIADO', 'EM_ANDAMENTO', 'CONCLUIDO']
+            if data['status'] not in valid_statuses:
+                raise serializers.ValidationError("Status inválido")
+        
+        # Validar nome
+        if 'name' in data:
+            if len(data['name']) > 200:
+                raise serializers.ValidationError("Nome da subatividade não pode ter mais de 200 caracteres")
+            if not data['name'].strip():
+                raise serializers.ValidationError("Nome da subatividade não pode estar vazio")
+        
+        # Validar ordem (deve ser positiva)
+        if 'order' in data and data['order'] is not None:
+            if data['order'] < 0:
+                raise serializers.ValidationError("Ordem deve ser um número positivo")
+        
+        return data
+    
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)
+
+class DispatchSerializer(serializers.ModelSerializer):
+    company = CompanySerializer(read_only=True)
+    company_id = serializers.PrimaryKeyRelatedField(queryset=Company.objects.all(), write_only=True, source='company')
+    responsible = UserSerializer(read_only=True)
+    responsible_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), write_only=True, source='responsible', required=False, allow_null=True)
+    subtasks = DispatchSubtaskSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Dispatch
+        fields = ['id', 'company', 'company_id', 'category', 'title', 'responsible', 'responsible_id',
+                 'start_date', 'end_date', 'progress_pct', 'status', 'created_by', 'created_at', 
+                 'updated_at', 'subtasks']
+        read_only_fields = ['created_by', 'created_at', 'updated_at', 'progress_pct', 'status']
+    
+    def validate(self, data):
+        # Validar datas
+        if data.get('start_date') and data.get('end_date'):
+            if data['start_date'] > data['end_date']:
+                raise serializers.ValidationError("Data inicial não pode ser posterior à data final")
+        
+        # Validar categoria
+        if 'category' in data:
+            valid_categories = ['NOTIFICACAO_FISCAL', 'FISCALIZACAO', 'DESPACHO_DECISORIO']
+            if data['category'] not in valid_categories:
+                raise serializers.ValidationError("Categoria inválida")
+        
+        # Validar título (se fornecido)
+        if 'title' in data and data['title']:
+            if len(data['title']) > 200:
+                raise serializers.ValidationError("Título não pode ter mais de 200 caracteres")
+        
+        return data
+    
+    def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)

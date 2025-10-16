@@ -15,6 +15,7 @@ import AdvancedReports from './pages/AdvancedReports'
 import Users from './pages/Users'
 import Approvals from './pages/Approvals'
 import MyDeliveries from './pages/MyDeliveries'
+import Dispatches from './pages/Dispatches'
 
 function RequireAuth({ children }){
   const token = localStorage.getItem('access')
@@ -47,6 +48,7 @@ try {
           <Route path="/users" element={<RequireAuth><Users/></RequireAuth>} />
           <Route path="/approvals" element={<RequireAuth><Approvals/></RequireAuth>} />
           <Route path="/my-deliveries" element={<RequireAuth><MyDeliveries/></RequireAuth>} />
+          <Route path="/despacho" element={<RequireAuth><Dispatches/></RequireAuth>} />
         </Routes>
       </BrowserRouter>
     </React.StrictMode>

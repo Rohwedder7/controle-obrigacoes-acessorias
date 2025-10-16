@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
 
 class State(models.Model):
     code = models.CharField(max_length=2, unique=True)
@@ -153,6 +154,107 @@ class Notification(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.user.username}"
+
+
+class Dispatch(models.Model):
+    CATEGORY_CHOICES = [
+        ('NOTIFICACAO_FISCAL', 'Notificação Fiscal'),
+        ('FISCALIZACAO', 'Fiscalização'),
+        ('DESPACHO_DECISORIO', 'Despacho Decisório'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('NAO_INICIADO', 'Não Iniciado'),
+        ('EM_ANDAMENTO', 'Em Andamento'),
+        ('CONCLUIDO', 'Concluído'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='dispatches')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    title = models.CharField(max_length=200, blank=True, null=True, verbose_name="Título")
+    responsible = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 
+                                   related_name='responsible_dispatches', verbose_name="Responsável")
+    start_date = models.DateField(verbose_name="Data Inicial")
+    end_date = models.DateField(verbose_name="Data Final")
+    progress_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0, 
+                                     verbose_name="Progresso (%)")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='NAO_INICIADO')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_dispatches')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Despacho"
+        verbose_name_plural = "Despachos"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.get_category_display()} - {self.company.name} ({self.start_date} a {self.end_date})"
+    
+    def save(self, *args, **kwargs):
+        # Recalcular progresso e status antes de salvar
+        self.update_progress()
+        super().save(*args, **kwargs)
+    
+    def update_progress(self):
+        """Recalcula o progresso e status baseado nas subatividades"""
+        subtasks = self.subtasks.all()
+        total = subtasks.count()
+        
+        if total == 0:
+            self.progress_pct = 0
+            self.status = 'NAO_INICIADO'
+        else:
+            completed = subtasks.filter(status='CONCLUIDO').count()
+            self.progress_pct = (completed / total) * 100
+            
+            if completed == total:
+                self.status = 'CONCLUIDO'
+            elif completed == 0:
+                self.status = 'NAO_INICIADO'
+            else:
+                self.status = 'EM_ANDAMENTO'
+
+
+class DispatchSubtask(models.Model):
+    STATUS_CHOICES = [
+        ('NAO_INICIADO', 'Não Iniciado'),
+        ('EM_ANDAMENTO', 'Em Andamento'),
+        ('CONCLUIDO', 'Concluído'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    dispatch = models.ForeignKey(Dispatch, on_delete=models.CASCADE, related_name='subtasks')
+    name = models.CharField(max_length=200, verbose_name="Nome da Subatividade")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='NAO_INICIADO')
+    order = models.IntegerField(default=0, verbose_name="Ordem")
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_subtasks')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Subatividade"
+        verbose_name_plural = "Subatividades"
+        ordering = ['order', 'created_at']
+        unique_together = ('dispatch', 'order')
+    
+    def __str__(self):
+        return f"{self.name} - {self.dispatch.company.name}"
+    
+    def save(self, *args, **kwargs):
+        # Se não tem ordem definida, usar a próxima disponível
+        if not self.order:
+            max_order = DispatchSubtask.objects.filter(dispatch=self.dispatch).aggregate(
+                max_order=models.Max('order')
+            )['max_order'] or 0
+            self.order = max_order + 1
+        
+        super().save(*args, **kwargs)
+        
+        # Atualizar progresso do dispatch pai
+        self.dispatch.update_progress()
+        self.dispatch.save()
 
 
 class AuditLog(models.Model):

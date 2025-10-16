@@ -18,6 +18,7 @@ from .views_approvals import (
     pending_approvals, approve_submission, reject_submission, request_revision,
     resubmit_submission, submission_timeline, download_attachment, my_deliveries
 )
+from .views_dispatches import DispatchViewSet, DispatchSubtaskViewSet, run_dispatch_notifications, recalculate_dispatch_progress
 
 router = DefaultRouter()
 router.register(r'states', StateViewSet)
@@ -25,6 +26,8 @@ router.register(r'companies', CompanyViewSet)
 router.register(r'obligation-types', ObligationTypeViewSet)
 router.register(r'obligations', ObligationViewSet)
 router.register(r'submissions', SubmissionViewSet)
+router.register(r'dispatches', DispatchViewSet, basename='dispatches')
+router.register(r'dispatches/(?P<dispatch_pk>[^/.]+)/subtasks', DispatchSubtaskViewSet, basename='dispatch-subtasks')
 
 urlpatterns = [
     path('auth/register/', register, name='register'),
@@ -81,4 +84,7 @@ urlpatterns = [
     path('approvals/<int:submission_id>/resubmit/', resubmit_submission, name='resubmit_submission'),
     path('approvals/<int:submission_id>/timeline/', submission_timeline, name='submission_timeline'),
     path('approvals/<int:submission_id>/attachments/<str:attachment_id>/download/', download_attachment, name='download_attachment'),
+        # Sistema de Despachos
+        path('dispatches/notifications/run/', run_dispatch_notifications, name='run_dispatch_notifications'),
+        path('dispatches/progress/recalculate/', recalculate_dispatch_progress, name='recalculate_dispatch_progress'),
 ]

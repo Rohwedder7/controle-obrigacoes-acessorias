@@ -46,6 +46,7 @@ const Sidebar = () => {
     { name: 'Dashboard', href: '/', icon: '📊' },
     { name: 'Empresas', href: '/companies', icon: '🏢' },
     { name: 'Obrigações', href: '/obligations', icon: '📋' },
+    { name: 'Despacho', href: '/despacho', icon: '📬' },
     { name: 'Entregas', href: '/submissions', icon: '✅' },
     { name: 'Minhas Entregas', href: '/my-deliveries', icon: '📦' },
     { name: 'Relatórios', href: '/reports', icon: '📈' },

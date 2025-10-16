@@ -737,4 +737,176 @@ export async function getMyDeliveries(statusFilter = '') {
   return r.json()
 }
 
+// ===== SISTEMA DE DESPACHO =====
+
+export async function getDispatches(filters = {}) {
+  const params = new URLSearchParams()
+  
+  if (filters.search) params.append('search', filters.search)
+  if (filters.company) params.append('company', filters.company)
+  if (filters.category) params.append('category', filters.category)
+  if (filters.responsible) params.append('responsible', filters.responsible)
+  if (filters.status) params.append('status', filters.status)
+  if (filters.start_date) params.append('start_date', filters.start_date)
+  if (filters.end_date) params.append('end_date', filters.end_date)
+  
+  const queryString = params.toString()
+  const url = queryString ? `/dispatches/?${queryString}` : '/dispatches/'
+  
+  const r = await api(url)
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+export async function createDispatch(dispatchData) {
+  const r = await api('/dispatches/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dispatchData)
+  })
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+export async function updateDispatch(id, dispatchData) {
+  const r = await api(`/dispatches/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dispatchData)
+  })
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+export async function deleteDispatch(id) {
+  const r = await api(`/dispatches/${id}/`, {
+    method: 'DELETE'
+  })
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return true
+}
+
+export async function getDispatch(id) {
+  const r = await api(`/dispatches/${id}/`)
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+export async function getDispatchProgress(id) {
+  const r = await api(`/dispatches/${id}/progress/`)
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+// Subatividades de Despacho
+export async function getDispatchSubtasks(dispatchId) {
+  const r = await api(`/dispatches/${dispatchId}/subtasks/`)
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+export async function createDispatchSubtask(dispatchId, subtaskData) {
+  const r = await api(`/dispatches/${dispatchId}/subtasks/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(subtaskData)
+  })
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+export async function updateDispatchSubtask(dispatchId, subtaskId, subtaskData) {
+  const r = await api(`/dispatches/${dispatchId}/subtasks/${subtaskId}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(subtaskData)
+  })
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+export async function deleteDispatchSubtask(dispatchId, subtaskId) {
+  const r = await api(`/dispatches/${dispatchId}/subtasks/${subtaskId}/`, {
+    method: 'DELETE'
+  })
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return true
+}
+
+// Notificações de Despacho
+export async function runDispatchNotifications() {
+  const r = await api('/dispatches/notifications/run/', {
+    method: 'POST'
+  })
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
+export async function recalculateDispatchProgress() {
+  const r = await api('/dispatches/progress/recalculate/', {
+    method: 'POST'
+  })
+  
+  if (!r.ok) {
+    const errorData = await r.json().catch(() => ({ error: 'Erro desconhecido' }))
+    throw new Error(errorData.error || `Erro ${r.status}: ${r.statusText}`)
+  }
+  
+  return r.json()
+}
+
 export default API
