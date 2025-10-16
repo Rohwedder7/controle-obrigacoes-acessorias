@@ -1,0 +1,247 @@
+================================================================================
+                    MELHORIA: RELATORIO COM APROVADOR E DIAS DE ATRASO
+================================================================================
+
+MELHORIA IMPLEMENTADA COM SUCESSO! ✅
+
+Agora os relatorios exibem:
+1. Quem foi o aprovador da entrega
+2. Dias de atraso quando a entrega foi feita apos o vencimento
+
+================================================================================
+                    MELHORIAS APLICADAS
+================================================================================
+
+1. RELATORIO DETALHADO (report_detailed)
+
+   Adicionado ao submission_info:
+   
+   - approval_status: Status da aprovacao
+   - approval_decision_at: Data/hora da decisao de aprovacao
+   - approval_decision_by: Informacoes do aprovador
+     * id
+     * username
+     * full_name (nome completo)
+     * email
+   - approval_comment: Comentario da aprovacao
+   - days_late: Dias de atraso (se entrega foi feita apos vencimento)
+
+   Calculo de dias de atraso:
+   - Se delivery_date > obligation.due_date:
+     days_late = (delivery_date - due_date).days
+   - Caso contrario:
+     days_late = 0
+
+2. RELATORIO CSV (report_csv)
+
+   Colunas adicionadas:
+   
+   - Aprovado por: Nome completo do aprovador
+   - Data de Aprovacao: Data/hora da aprovacao
+   - Comentario de Aprovacao: Comentario deixado pelo aprovador
+
+   Coluna atualizada:
+   
+   - Dias de Atraso: Agora calcula dias de atraso baseado em
+     delivery_date vs due_date (antes era baseado em hoje)
+
+3. RELATORIO XLSX (report_xlsx)
+
+   Colunas adicionadas:
+   
+   - Aprovado por: Nome completo do aprovador
+   - Data de Aprovacao: Data/hora da aprovacao
+   - Comentario de Aprovacao: Comentario deixado pelo aprovador
+
+   Coluna atualizada:
+   
+   - Dias de Atraso: Agora calcula dias de atraso baseado em
+     delivery_date vs due_date (antes era baseado em hoje)
+
+   Larguras de colunas ajustadas para acomodar novas colunas.
+
+================================================================================
+                    COMO FUNCIONA
+================================================================================
+
+CALCULO DE DIAS DE ATRASO:
+
+1. Se a obrigacao foi entregue (tem submission aprovada):
+   - Compara data de entrega com data de vencimento
+   - Se entrega > vencimento: calcula dias de atraso
+   - Se entrega <= vencimento: dias de atraso = 0
+
+2. Se a obrigacao NAO foi entregue:
+   - Compara data atual com data de vencimento
+   - Se hoje > vencimento: calcula dias de atraso
+   - Se hoje <= vencimento: dias de atraso = 0
+
+INFORMACOES DO APROVADOR:
+
+1. Nome completo:
+   - Se first_name e last_name existem: concatena
+   - Se nao existe: usa username
+
+2. Data de aprovacao:
+   - Formato ISO: YYYY-MM-DDTHH:MM:SS
+   - Vazio se nao houver aprovacao
+
+3. Comentario de aprovacao:
+   - Texto do comentario deixado pelo aprovador
+   - Vazio se nao houver comentario
+
+================================================================================
+                    EXEMPLO DE DADOS
+================================================================================
+
+RELATORIO DETALHADO (JSON):
+
+{
+  "submission_info": {
+    "delivered_at": "2026-01-01T10:30:00Z",
+    "delivered_by": "usuario123",
+    "submission_type": "original",
+    "delivery_date": "2026-01-01",
+    "comments": "Entrega realizada",
+    "has_receipt_file": true,
+    "attachments_count": 2,
+    "approval_status": "approved",
+    "approval_decision_at": "2026-01-02T14:20:00Z",
+    "approval_decision_by": {
+      "id": 5,
+      "username": "admin",
+      "full_name": "Joao Silva",
+      "email": "joao@empresa.com"
+    },
+    "approval_comment": "Aprovado com ressalvas",
+    "days_late": 42
+  }
+}
+
+RELATORIO CSV/XLSX:
+
+Empresa, CNPJ, Estado, Tipo de Obrigação, ..., Dias de Atraso, Aprovado por, Data de Aprovacao, Comentario de Aprovacao, ...
+GDM, 12345678000190, SP, SPED Fiscal, ..., 42, Joao Silva, 2026-01-02T14:20:00Z, Aprovado com ressalvas, ...
+
+================================================================================
+                    COMO TESTAR
+================================================================================
+
+PASSO 1: REINICIAR O SERVIDOR
+
+   cd backend
+   python manage.py runserver
+
+PASSO 2: TESTAR RELATORIO DETALHADO
+
+   1. Acesse http://localhost:5173
+   2. Va em "Relatorios"
+   3. Clique em "Relatorio Detalhado"
+   4. Verifique se submission_info contem:
+      - approval_decision_by (com id, username, full_name, email)
+      - approval_decision_at
+      - approval_comment
+      - days_late
+
+PASSO 3: TESTAR EXPORTACAO CSV
+
+   1. Em "Relatorios"
+   2. Clique em "Exportar CSV"
+   3. Abra o arquivo CSV
+   4. Verifique se as colunas estao presentes:
+      - Aprovado por
+      - Data de Aprovacao
+      - Comentario de Aprovacao
+      - Dias de Atraso (com valores corretos)
+
+PASSO 4: TESTAR EXPORTACAO XLSX
+
+   1. Em "Relatorios"
+   2. Clique em "Exportar XLSX"
+   3. Abra o arquivo XLSX
+   4. Verifique se as colunas estao presentes:
+      - Aprovado por
+      - Data de Aprovacao
+      - Comentario de Aprovacao
+      - Dias de Atraso (com valores corretos)
+
+================================================================================
+                    VERIFICACAO MANUAL
+================================================================================
+
+Para verificar se os dados estao corretos:
+
+   cd backend
+   python manage.py shell
+   
+   >>> from core.models import Submission
+   >>> sub = Submission.objects.filter(approval_status='approved').first()
+   >>> if sub:
+   ...     print(f'Entrega: {sub.delivery_date}')
+   ...     print(f'Vencimento: {sub.obligation.due_date}')
+   ...     print(f'Dias de atraso: {(sub.delivery_date - sub.obligation.due_date).days}')
+   ...     print(f'Aprovador: {sub.approval_decision_by}')
+   ...     print(f'Data de aprovacao: {sub.approval_decision_at}')
+   ...     print(f'Comentario: {sub.approval_comment}')
+
+================================================================================
+                    ARQUIVOS MODIFICADOS
+================================================================================
+
+1. backend/core/views.py
+   
+   - Linha 253-255: Adicionado select_related de approval_decision_by
+   - Linha 321-328: Atualizado calculo de days_late
+   - Linha 350-373: Adicionado submission_info com dados do aprovador
+   - Linha 582-586: Atualizado cabecalho CSV
+   - Linha 594-647: Atualizado logica CSV
+   - Linha 668-673: Atualizado cabecalho XLSX
+   - Linha 695: Atualizado larguras de colunas XLSX
+   - Linha 702-761: Atualizado logica XLSX
+
+================================================================================
+                    CHECKLIST
+================================================================================
+
+- [x] Relatorio detalhado exibe informacoes do aprovador
+- [x] Relatorio detalhado calcula dias de atraso corretamente
+- [x] Exportacao CSV inclui colunas de aprovacao
+- [x] Exportacao XLSX inclui colunas de aprovacao
+- [x] Dias de atraso calculados corretamente
+- [x] Sem erros de lint
+- [x] Codigo segue melhores praticas
+
+================================================================================
+                    MELHORES PRATICAS APLICADAS
+================================================================================
+
+1. SEGURANCA:
+   - Verificacao de existencia de dados antes de acessar
+   - Uso de safe defaults (valores vazios se dados nao existem)
+   - Tratamento de casos onde approval_decision_by e None
+
+2. PERFORMANCE:
+   - Uso de select_related para evitar N+1 queries
+   - Prefetch_related para submissions
+   - Calculo eficiente de dias de atraso
+
+3. MANUTENIBILIDADE:
+   - Codigo limpo e bem documentado
+   - Logica reutilizavel
+   - Facil de entender e modificar
+
+4. CONSISTENCIA:
+   - Mesma logica aplicada em todos os relatorios
+   - Formato de dados consistente
+   - Nomes de colunas padronizados
+
+================================================================================
+
+                    MELHORIA IMPLEMENTADA COM SUCESSO! ✅
+
+================================================================================
+
+REINICIE O SERVIDOR E TESTE AS MELHORIAS!
+
+================================================================================
+

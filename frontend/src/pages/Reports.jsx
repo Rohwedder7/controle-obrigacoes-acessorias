@@ -162,14 +162,19 @@ export default function Reports(){
   const formatDate = (dateString) => {
     if (!dateString) return ''
     
-    // Se a data já está no formato YYYY-MM-DD, converte diretamente sem problemas de timezone
+    // Se a data já estiver no formato DD/MM/AAAA, retorna direto
+    if (dateString.includes('/')) {
+      return dateString
+    }
+    
+    // Se a data está no formato YYYY-MM-DD ou YYYY-MM-DDTHH:MM:SS, converte diretamente sem problemas de timezone
     if (dateString.includes('-')) {
-      const [year, month, day] = dateString.split('-')
+      const [year, month, day] = dateString.split('T')[0].split('-')
       return `${day}/${month}/${year}`
     }
     
-    // Fallback para o método original se não for formato ISO
-    return new Date(dateString).toLocaleDateString('pt-BR')
+    // Fallback: retorna string vazia
+    return ''
   }
   
   const getStatusBadge = (status) => {
@@ -223,7 +228,7 @@ export default function Reports(){
                       onChange={() => handleCompanyToggle(company.id)}
                       className="rounded"
                     />
-                    <span>{company.name}</span>
+                    <span>[{company.code}] {company.name}</span>
                   </label>
                 ))}
               </div>
@@ -375,7 +380,7 @@ export default function Reports(){
         {reportData && (
           <div className="space-y-6">
             {/* Cards de Totais */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <div className="bg-white p-6 rounded-lg shadow-lg">
                 <div className="flex items-center">
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -426,8 +431,22 @@ export default function Reports(){
                     </svg>
                   </div>
                   <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Atrasadas</p>
-                    <p className="text-2xl font-bold text-red-600">{reportData.totals.late}</p>
+                    <p className="text-sm font-medium text-gray-600">Entregas Atrasadas</p>
+                    <p className="text-2xl font-bold text-red-600">{reportData.totals.late_deliveries || 0}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white p-6 rounded-lg shadow-lg">
+                <div className="flex items-center">
+                  <div className="p-2 bg-gray-100 rounded-lg">
+                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Atrasadas (Pendente de Entrega)</p>
+                    <p className="text-2xl font-bold text-gray-600">{reportData.totals.late}</p>
                   </div>
                 </div>
               </div>
@@ -482,6 +501,8 @@ export default function Reports(){
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entregue em</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Atraso</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aprovado por</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Aprovação</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anexos</th>
                     </tr>
                   </thead>
@@ -527,7 +548,26 @@ export default function Reports(){
                           {row.submission_info ? formatDate(row.submission_info.delivery_date) : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {row.days_late > 0 ? `${row.days_late} dias` : '-'}
+                          {row.submission_info?.days_late > 0 ? (
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                              {row.submission_info.days_late} dias
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {row.submission_info?.approval_decision_by ? (
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {row.submission_info.approval_decision_by.full_name || row.submission_info.approval_decision_by.username}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {row.submission_info.approval_decision_by.email}
+                              </div>
+                            </div>
+                          ) : '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {row.submission_info?.approval_decision_at ? formatDate(row.submission_info.approval_decision_at) : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {row.total_attachments > 0 ? (

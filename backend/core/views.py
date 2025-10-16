@@ -3,7 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth.models import User, Group
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Q, Exists, OuterRef
 from django.http import HttpResponse
 import csv
 from django.utils import timezone
@@ -250,7 +250,9 @@ def report_detailed(request):
     qs = Obligation.objects.select_related(
         'company', 'state', 'obligation_type', 'created_by'
     ).prefetch_related(
-        Prefetch('submissions', queryset=Submission.objects.select_related('delivered_by').order_by('-delivered_at'))
+        Prefetch('submissions', queryset=Submission.objects.select_related(
+            'delivered_by', 'approval_decision_by'
+        ).order_by('-delivered_at'))
     )
     
     # Aplicar filtros
@@ -319,7 +321,11 @@ def report_detailed(request):
         if latest_submission:
             status = 'entregue'
             delivered_count += 1
-            days_late = 0
+            # Calcular dias de atraso se a entrega foi feita após o vencimento
+            if latest_submission.delivery_date > obligation.due_date:
+                days_late = (latest_submission.delivery_date - obligation.due_date).days
+            else:
+                days_late = 0
         elif obligation.due_date < today:
             status = 'atrasado'
             late_count += 1
@@ -341,6 +347,16 @@ def report_detailed(request):
         # Informações da última entrega
         submission_info = None
         if latest_submission:
+            # Informações do aprovador
+            approver_info = None
+            if latest_submission.approval_decision_by:
+                approver_info = {
+                    'id': latest_submission.approval_decision_by.id,
+                    'username': latest_submission.approval_decision_by.username,
+                    'full_name': f"{latest_submission.approval_decision_by.first_name} {latest_submission.approval_decision_by.last_name}".strip() or latest_submission.approval_decision_by.username,
+                    'email': latest_submission.approval_decision_by.email
+                }
+            
             submission_info = {
                 'delivered_at': latest_submission.delivered_at.isoformat(),
                 'delivered_by': latest_submission.delivered_by.username if latest_submission.delivered_by else None,
@@ -348,7 +364,12 @@ def report_detailed(request):
                 'delivery_date': latest_submission.delivery_date.isoformat(),
                 'comments': latest_submission.comments or '',
                 'has_receipt_file': bool(latest_submission.receipt_file),
-                'attachments_count': latest_submission.attachments.count()
+                'attachments_count': latest_submission.attachments.count(),
+                'approval_status': latest_submission.approval_status,
+                'approval_decision_at': latest_submission.approval_decision_at.isoformat() if latest_submission.approval_decision_at else None,
+                'approval_decision_by': approver_info,
+                'approval_comment': latest_submission.approval_comment or '',
+                'days_late': days_late if latest_submission.delivery_date > obligation.due_date else 0
             }
         
         row = {
@@ -445,6 +466,12 @@ def report_detailed(request):
             'delivered': stats['delivered']
         })
     
+    # Contar entregas atrasadas (submissions feitas após vencimento)
+    late_deliveries_count = 0
+    for row in rows:
+        if row['submission_info'] and row['submission_info'].get('days_late', 0) > 0:
+            late_deliveries_count += 1
+    
     return Response({
         'filters_applied': {
             'company_ids': company_ids,
@@ -461,6 +488,7 @@ def report_detailed(request):
             'submissions': delivered_count,
             'pending': pending_count,
             'late': late_count,
+            'late_deliveries': late_deliveries_count,  # Entregas feitas após vencimento
             'delivered': delivered_count
         },
         'by_company': sorted(by_company, key=lambda x: x['count'], reverse=True),
@@ -561,7 +589,8 @@ def report_csv(request):
     writer.writerow([
         'Empresa', 'CNPJ', 'Estado', 'Tipo de Obrigação', 'Nome da Obrigação', 
         'Competência', 'Vencimento', 'Prazo Entrega', 'Status', 'Entregue em', 
-        'Entregue por', 'Dias de Atraso', 'Anexos', 'Criado por', 'Criado em', 'Notas'
+        'Entregue por', 'Dias de Atraso', 'Aprovado por', 'Data de Aprovação',
+        'Comentário de Aprovação', 'Anexos', 'Criado por', 'Criado em', 'Notas'
     ])
     
     today = timezone.now().date()
@@ -569,10 +598,14 @@ def report_csv(request):
         # Considerar apenas submissions aprovadas
         sub = o.submissions.filter(approval_status='approved').order_by('-delivered_at').first()
         
-        # Determinar status
+        # Determinar status e calcular dias de atraso
         if sub:
             status = 'entregue'
-            days_late = 0
+            # Calcular dias de atraso se a entrega foi feita após o vencimento
+            if sub.delivery_date > o.due_date:
+                days_late = (sub.delivery_date - o.due_date).days
+            else:
+                days_late = 0
         elif o.due_date < today:
             status = 'atrasado'
             days_late = (today - o.due_date).days
@@ -587,6 +620,17 @@ def report_csv(request):
         # Contar anexos
         attachments_count = o.submissions.filter(receipt_file__isnull=False).count()
         
+        # Informações do aprovador
+        approver_name = ''
+        approval_date = ''
+        approval_comment = ''
+        if sub and sub.approval_decision_by:
+            approver_name = f"{sub.approval_decision_by.first_name} {sub.approval_decision_by.last_name}".strip()
+            if not approver_name:
+                approver_name = sub.approval_decision_by.username
+            approval_date = sub.approval_decision_at.isoformat() if sub.approval_decision_at else ''
+            approval_comment = sub.approval_comment or ''
+        
         writer.writerow([
             o.company.name,
             o.company.cnpj or '',
@@ -600,6 +644,9 @@ def report_csv(request):
             sub.delivery_date.isoformat() if sub else '',
             sub.delivered_by.username if sub and sub.delivered_by else '',
             days_late,
+            approver_name,
+            approval_date,
+            approval_comment,
             attachments_count,
             o.created_by.username if o.created_by else '',
             o.created_at.isoformat(),
@@ -628,7 +675,8 @@ def report_xlsx(request):
     headers = [
         'Empresa', 'CNPJ', 'Estado', 'Tipo de Obrigação', 'Nome da Obrigação', 
         'Competência', 'Vencimento', 'Prazo Entrega', 'Status', 'Entregue em', 
-        'Entregue por', 'Dias de Atraso', 'Anexos', 'Criado por', 'Criado em', 'Notas'
+        'Entregue por', 'Dias de Atraso', 'Aprovado por', 'Data de Aprovação',
+        'Comentário de Aprovação', 'Anexos', 'Criado por', 'Criado em', 'Notas'
     ]
     ws.append(headers)
     
@@ -651,7 +699,7 @@ def report_xlsx(request):
     ws.auto_filter.ref = f"A1:{chr(65 + len(headers) - 1)}1"
     
     # Ajustar largura das colunas
-    column_widths = [20, 15, 8, 25, 25, 12, 12, 12, 10, 12, 15, 10, 8, 15, 12, 30]
+    column_widths = [20, 15, 8, 25, 25, 12, 12, 12, 10, 12, 15, 10, 15, 12, 30, 8, 15, 12, 30]
     for i, width in enumerate(column_widths, 1):
         ws.column_dimensions[chr(64 + i)].width = width
     
@@ -662,10 +710,14 @@ def report_xlsx(request):
         # Considerar apenas submissions aprovadas
         sub = o.submissions.filter(approval_status='approved').order_by('-delivered_at').first()
         
-        # Determinar status
+        # Determinar status e calcular dias de atraso
         if sub:
             status = 'entregue'
-            days_late = 0
+            # Calcular dias de atraso se a entrega foi feita após o vencimento
+            if sub.delivery_date > o.due_date:
+                days_late = (sub.delivery_date - o.due_date).days
+            else:
+                days_late = 0
         elif o.due_date < today:
             status = 'atrasado'
             days_late = (today - o.due_date).days
@@ -680,6 +732,17 @@ def report_xlsx(request):
         # Contar anexos
         attachments_count = o.submissions.filter(receipt_file__isnull=False).count()
         
+        # Informações do aprovador
+        approver_name = ''
+        approval_date = ''
+        approval_comment = ''
+        if sub and sub.approval_decision_by:
+            approver_name = f"{sub.approval_decision_by.first_name} {sub.approval_decision_by.last_name}".strip()
+            if not approver_name:
+                approver_name = sub.approval_decision_by.username
+            approval_date = sub.approval_decision_at.isoformat() if sub.approval_decision_at else ''
+            approval_comment = sub.approval_comment or ''
+        
         row_data = [
             o.company.name,
             o.company.cnpj or '',
@@ -693,6 +756,9 @@ def report_xlsx(request):
             sub.delivery_date.isoformat() if sub else '',
             sub.delivered_by.username if sub and sub.delivered_by else '',
             days_late,
+            approver_name,
+            approval_date,
+            approval_comment,
             attachments_count,
             o.created_by.username if o.created_by else '',
             o.created_at.isoformat(),
@@ -786,11 +852,23 @@ def dashboard_metrics(request):
     
     # Métricas gerais - considerar apenas submissions aprovadas
     total_obligations = obligations_query.count()
-    pending_obligations = obligations_query.exclude(submissions__approval_status='approved').distinct().count()
     delivered_obligations = obligations_query.filter(submissions__approval_status='approved').distinct().count()
+    
+    # Contar obrigações pendentes (sem submission aprovada)
+    pending_obligations = obligations_query.exclude(submissions__approval_status='approved').distinct().count()
+    
+    # Contar obrigações em atraso (vencidas sem submission aprovada)
     overdue_obligations = obligations_query.filter(
         due_date__lt=today
     ).exclude(submissions__approval_status='approved').distinct().count()
+    
+    # Contar entregas atrasadas (submissions após vencimento, independente do status)
+    late_deliveries_count = Submission.objects.filter(
+        delivery_date__gt=F('obligation__due_date')
+    ).distinct().count()
+    
+    # Obrigações pendentes (sem submission aprovada e sem entrega atrasada)
+    pending_not_late = pending_obligations
     
     # Taxa de cumprimento geral
     compliance_rate = (delivered_obligations / total_obligations * 100) if total_obligations > 0 else 0
@@ -911,9 +989,10 @@ def dashboard_metrics(request):
     return Response({
         # Métricas gerais
         'total_obligations': total_obligations,
-        'pending_obligations': pending_obligations,
+        'pending_obligations': pending_not_late,  # Pendentes que não são entregas atrasadas
         'delivered_obligations': delivered_obligations,
         'overdue_obligations': overdue_obligations,
+        'late_deliveries': late_deliveries_count,  # Entregas após vencimento
         'compliance_rate': round(compliance_rate, 2),
         
         # Performance por usuário
@@ -959,6 +1038,46 @@ def dashboard_metrics(request):
         }
     })
 
+def parse_date_from_excel(date_value):
+    """
+    Converte valores de data do Excel para objetos date do Python
+    Evita problemas de timezone que fazem datas voltarem um dia
+    """
+    if date_value is None:
+        return None
+    
+    # Se já for date, retorna direto
+    if isinstance(date_value, datetime.date) and not isinstance(date_value, datetime.datetime):
+        return date_value
+    
+    # Se for datetime, converte para date (remove hora/timezone)
+    if isinstance(date_value, datetime.datetime):
+        return date_value.date()
+    
+    # Se for string, tenta parsear
+    if isinstance(date_value, str):
+        date_str = str(date_value).strip()
+        if not date_str:
+            return None
+        
+        # Tentar diferentes formatos
+        try:
+            # Formato DD/MM/YYYY
+            if '/' in date_str and len(date_str.split('/')) == 3:
+                parts = date_str.split('/')
+                if len(parts[2]) == 4:  # YYYY
+                    return datetime.datetime.strptime(date_str, '%d/%m/%Y').date()
+                else:  # DD/MM/YY
+                    return datetime.datetime.strptime(date_str, '%d/%m/%y').date()
+            
+            # Formato YYYY-MM-DD
+            if '-' in date_str and len(date_str.split('-')) == 3:
+                return datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        except:
+            pass
+    
+    return None
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def bulk_import_obligations(request):
@@ -980,9 +1099,9 @@ def bulk_import_obligations(request):
                 
             try:
                 # Mapear colunas da planilha
-                company_name, state_code, otype_name, obligation_name, competence, due_date, delivery_deadline, responsible_username, validity_start, validity_end, notes = row[:11]
+                company_cnpj, state_code, otype_name, obligation_name, competence, due_date, delivery_deadline, responsible_username, validity_start, validity_end, notes = row[:11]
                 
-                if not company_name or not state_code or not otype_name or not competence or not due_date:
+                if not company_cnpj or not state_code or not otype_name or not competence or not due_date:
                     errors.append(f"Linha {i}: Campos obrigatórios não preenchidos")
                     continue
                 
@@ -1019,10 +1138,21 @@ def bulk_import_obligations(request):
                     errors.append(f"Linha {i}: Erro ao converter competência '{competence}': {str(e)}")
                     continue
                 
-                # Buscar ou criar empresa
-                company = Company.objects.filter(name=str(company_name)).first()
+                # Processar datas corretamente (evitar problema de timezone)
+                due_date_parsed = parse_date_from_excel(due_date)
+                if not due_date_parsed:
+                    errors.append(f"Linha {i}: Data de vencimento inválida: '{due_date}'")
+                    continue
+                
+                delivery_deadline_parsed = parse_date_from_excel(delivery_deadline) if delivery_deadline else None
+                validity_start_parsed = parse_date_from_excel(validity_start) if validity_start else datetime.date(2024, 1, 1)
+                validity_end_parsed = parse_date_from_excel(validity_end) if validity_end else datetime.date(2024, 12, 31)
+                
+                # Buscar empresa pelo CNPJ (remover formatação)
+                cnpj_clean = str(company_cnpj).replace('.', '').replace('/', '').replace('-', '').strip()
+                company = Company.objects.filter(cnpj=cnpj_clean).first()
                 if not company:
-                    errors.append(f"Linha {i}: Empresa '{company_name}' não encontrada")
+                    errors.append(f"Linha {i}: Empresa com CNPJ '{company_cnpj}' não encontrada")
                     continue
                 
                 # Buscar estado
@@ -1051,11 +1181,11 @@ def bulk_import_obligations(request):
                     competence=competence_formatted,
                     defaults={
                         'obligation_name': obligation_name or '',
-                        'due_date': due_date,
-                        'delivery_deadline': delivery_deadline,
+                        'due_date': due_date_parsed,
+                        'delivery_deadline': delivery_deadline_parsed,
                         'responsible_user': responsible_user,
-                        'validity_start_date': validity_start or '2024-01-01',
-                        'validity_end_date': validity_end or '2024-12-31',
+                        'validity_start_date': validity_start_parsed,
+                        'validity_end_date': validity_end_parsed,
                         'created_by': request.user if request.user.is_authenticated else None,
                         'notes': notes or ''
                     }
@@ -1095,26 +1225,50 @@ def bulk_import_companies(request):
                 
             try:
                 # Mapear colunas da planilha
-                name, cnpj, fantasy_name, email, phone, address, responsible = row[:7]
+                code, name, cnpj, fantasy_name, email, phone, address, responsible = row[:8]
+                
+                if not code:
+                    errors.append(f"Linha {i}: Código da empresa é obrigatório")
+                    continue
                 
                 if not name:
                     errors.append(f"Linha {i}: Nome da empresa é obrigatório")
                     continue
                 
+                # Limpar código (remover espaços)
+                code = str(code).strip()
+                
+                # Verificar se o código já existe
+                if Company.objects.filter(code=code).exists():
+                    errors.append(f"Linha {i}: Código '{code}' já existe. Empresa não criada.")
+                    continue
+                
+                # Limpar CNPJ (remover formatação)
+                cnpj_clean = ''
+                if cnpj:
+                    cnpj_clean = str(cnpj).replace('.', '').replace('/', '').replace('-', '').strip()
+                    
+                    # Verificar se CNPJ já existe
+                    if cnpj_clean and Company.objects.filter(cnpj=cnpj_clean).exists():
+                        errors.append(f"Linha {i}: CNPJ '{cnpj}' já cadastrado. Empresa não criada.")
+                        continue
+                
                 # Criar empresa
-                obj, made = Company.objects.get_or_create(
-                    name=str(name),
-                    defaults={
-                        'cnpj': str(cnpj) if cnpj else '',
-                        'fantasy_name': str(fantasy_name) if fantasy_name else '',
-                        'email': str(email) if email else '',
-                        'phone': str(phone) if phone else '',
-                        'address': str(address) if address else '',
-                        'responsible': str(responsible) if responsible else ''
-                    }
-                )
-                if made: 
+                try:
+                    company = Company.objects.create(
+                        code=code,
+                        name=str(name).strip(),
+                        cnpj=cnpj_clean,
+                        fantasy_name=str(fantasy_name).strip() if fantasy_name else '',
+                        email=str(email).strip() if email else '',
+                        phone=str(phone).strip() if phone else '',
+                        address=str(address).strip() if address else '',
+                        responsible=str(responsible).strip() if responsible else '',
+                        active=True
+                    )
                     created += 1
+                except Exception as e:
+                    errors.append(f"Linha {i}: Erro ao criar empresa - {str(e)}")
                     
             except Exception as e:
                 errors.append(f"Linha {i}: Erro - {str(e)}")
@@ -1134,6 +1288,7 @@ def download_template(request, template_type):
     import os
     from django.http import FileResponse
     from django.conf import settings
+    from openpyxl import load_workbook
     
     template_files = {
         'companies': 'template_empresas.xlsx',
@@ -1147,6 +1302,15 @@ def download_template(request, template_type):
     
     if not os.path.exists(file_path):
         return Response({'detail': 'Template não encontrado'}, status=404)
+    
+    # Debug: Verificar cabeçalhos do template
+    try:
+        wb = load_workbook(file_path)
+        ws = wb.active
+        headers = [cell.value for cell in ws[1]]
+        print(f"DEBUG: Template {template_type} - Cabeçalhos: {headers}")
+    except Exception as e:
+        print(f"DEBUG: Erro ao ler template: {e}")
     
     return FileResponse(
         open(file_path, 'rb'),

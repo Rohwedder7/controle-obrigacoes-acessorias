@@ -456,6 +456,7 @@ def list_deliveries(request):
         qs = qs.filter(submission_type=status)
     
     # Serializar dados
+    today = timezone.now().date()
     deliveries = []
     for submission in qs:
         # Contar anexos
@@ -464,6 +465,25 @@ def list_deliveries(request):
             attachments_count += 1
         attachments_count += submission.attachments.count()
         
+        # Determinar status da entrega
+        # Se aprovada, status é "Entregue"
+        # Se não aprovada, verificar se está atrasada
+        if submission.approval_status == 'approved':
+            delivery_status = 'entregue'
+        elif submission.delivery_date > submission.obligation.due_date:
+            # Entrega após vencimento e não aprovada = Atrasada
+            delivery_status = 'atrasada'
+        else:
+            # Entrega antes do vencimento mas não aprovada = Pendente
+            delivery_status = 'pendente'
+        
+        # Informações de status
+        status_info = {
+            'entregue': {'label': 'Entregue', 'icon': '✅', 'color': 'green'},
+            'atrasada': {'label': 'Atrasada', 'icon': '⚠️', 'color': 'red'},
+            'pendente': {'label': 'Pendente de Aprovação', 'icon': '⏳', 'color': 'yellow'}
+        }
+        
         deliveries.append({
             'id': submission.id,
             'company': submission.obligation.company.name,
@@ -471,6 +491,7 @@ def list_deliveries(request):
             'obligation': submission.obligation.obligation_name or submission.obligation.obligation_type.name,
             'competence': submission.obligation.competence,
             'state': submission.obligation.state.code,
+            'due_date': submission.obligation.due_date.isoformat(),
             'delivery_date': submission.delivery_date.isoformat(),
             'delivered_at': submission.delivered_at.isoformat(),
             'delivered_by': submission.delivered_by.username if submission.delivered_by else None,
@@ -479,7 +500,11 @@ def list_deliveries(request):
             'attachments_count': attachments_count,
             'batch_id': str(submission.batch_id) if submission.batch_id else None,
             'has_receipt': bool(submission.receipt_file),
-            'receipt_url': submission.receipt_file.url if submission.receipt_file else None
+            'receipt_url': submission.receipt_file.url if submission.receipt_file else None,
+            'approval_status': submission.approval_status,
+            'delivery_status': delivery_status,
+            'status_info': status_info.get(delivery_status, {}),
+            'is_late': submission.delivery_date > submission.obligation.due_date
         })
     
     return Response({

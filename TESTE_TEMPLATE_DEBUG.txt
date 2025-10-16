@@ -1,0 +1,121 @@
+================================================================================
+                    🔍 TESTE DE DEBUG - VERIFICAR TEMPLATE
+================================================================================
+
+Adicionei um debug na view que serve os templates. Agora vamos testar!
+
+================================================================================
+                    📋 PASSO A PASSO PARA TESTAR
+================================================================================
+
+PASSO 1: REINICIAR O SERVIDOR DJANGO
+
+1. Pare o servidor Django (Ctrl+C)
+2. Reinicie:
+   cd backend
+   python manage.py runserver
+
+IMPORTANTE: Mantenha o terminal do Django aberto para ver os logs!
+
+PASSO 2: BAIXAR O TEMPLATE
+
+1. Acesse http://localhost:5173
+2. Vá em "Empresas"
+3. Clique em "Baixar Template"
+4. O arquivo será baixado
+
+PASSO 3: VERIFICAR OS LOGS
+
+Olhe no terminal do Django e procure por uma linha que começa com:
+"DEBUG: Template companies - Cabeçalhos:"
+
+Você verá algo como:
+DEBUG: Template companies - Cabeçalhos: ['Código', 'Razão Social', 'CNPJ', ...]
+
+SE VOCÊ VER:
+✅ ['Código', 'Razão Social', 'CNPJ', ...]
+   → Template está CORRETO no servidor!
+
+❌ ['Nome da Empresa', 'CNPJ', ...]
+   → Template está INCORRETO no servidor!
+
+PASSO 4: VERIFICAR O ARQUIVO BAIXADO
+
+Abra o arquivo baixado no Excel e verifique a primeira coluna.
+
+================================================================================
+                    🎯 RESULTADOS ESPERADOS
+================================================================================
+
+LOGS DO DJANGO (terminal):
+DEBUG: Template companies - Cabeçalhos: ['Código', 'Razão Social', 'CNPJ', 'Nome Fantasia', 'E-mail', 'Telefone', 'Endereço', 'Responsável']
+
+ARQUIVO EXCEL BAIXADO:
+┌──────────┬──────────────────────┬──────────────────┬─────────────────┐
+│ Código   │ Razão Social         │ CNPJ             │ Nome Fantasia   │
+├──────────┼──────────────────────┼──────────────────┼─────────────────┤
+│ EMP001   │ Empresa Exemplo Ltda │ 12345678000190   │ Exemplo         │
+└──────────┴──────────────────────┴──────────────────┴─────────────────┘
+
+PRIMEIRA COLUNA: "Código" ✓
+
+================================================================================
+                    🔧 SE OS LOGS MOSTRAREM TEMPLATE INCORRETO
+================================================================================
+
+Se os logs mostrarem que o template no servidor está incorreto,
+execute este comando para recriar o template:
+
+python -c "import os; from openpyxl import Workbook; os.makedirs('backend/media/templates', exist_ok=True); wb = Workbook(); ws = wb.active; ws.append(['Código', 'Razão Social', 'CNPJ', 'Nome Fantasia', 'E-mail', 'Telefone', 'Endereço', 'Responsável']); ws.append(['EMP001', 'Empresa Exemplo Ltda', '12345678000190', 'Exemplo', 'contato@exemplo.com', '(11) 99999-9999', 'Rua Exemplo, 123', 'João Silva']); ws.column_dimensions['A'].width = 15; ws.column_dimensions['B'].width = 40; ws.column_dimensions['C'].width = 18; ws.column_dimensions['D'].width = 30; ws.column_dimensions['E'].width = 30; ws.column_dimensions['F'].width = 18; ws.column_dimensions['G'].width = 40; ws.column_dimensions['H'].width = 25; wb.save('backend/media/templates/template_empresas.xlsx'); print('Template criado!')"
+
+Depois reinicie o servidor novamente.
+
+================================================================================
+                    🔧 SE OS LOGS MOSTRAREM TEMPLATE CORRETO MAS O ARQUIVO BAIXADO ESTIVER ERRADO
+================================================================================
+
+Isso significa que há cache do navegador ou do Django.
+
+SOLUÇÃO 1: Limpar cache do navegador
+- Pressione Ctrl+Shift+Del
+- Selecione "Imagens e arquivos em cache"
+- Limpe os dados
+
+SOLUÇÃO 2: Baixar em modo anônimo
+- Abra uma janela anônima (Ctrl+Shift+N)
+- Acesse http://localhost:5173
+- Baixe o template
+
+SOLUÇÃO 3: Baixar diretamente da API
+- Acesse: http://localhost:8000/api/download-template/companies/
+- O arquivo será baixado diretamente da API
+
+================================================================================
+                    📝 CHECKLIST
+================================================================================
+
+- [ ] Servidor Django reiniciado
+- [ ] Terminal do Django aberto e visível
+- [ ] Template baixado pelo sistema
+- [ ] Logs verificados no terminal
+- [ ] Arquivo baixado aberto no Excel
+- [ ] Primeira coluna verificada
+
+================================================================================
+                    📞 ME ENVIE ESTAS INFORMAÇÕES
+================================================================================
+
+Após fazer o teste, me envie:
+
+1. O que apareceu nos logs do Django (linha com "DEBUG: Template companies")
+2. Qual é a primeira coluna do arquivo baixado
+3. Se o problema persiste
+
+Com essas informações posso identificar exatamente onde está o problema!
+
+================================================================================
+
+                    FAÇA O TESTE E ME ENVIE OS RESULTADOS! 🔍
+
+================================================================================
+

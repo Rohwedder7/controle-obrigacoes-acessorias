@@ -157,6 +157,7 @@ export function StatusDistributionChart({ data }) {
   const delivered = data?.delivered_obligations || 0;
   const pending = data?.pending_obligations || 0;
   const overdue = data?.overdue_obligations || 0;
+  const lateDeliveries = data?.late_deliveries || 0;
 
   // Se não há dados, mostrar mensagem
   if (total === 0) {
@@ -173,19 +174,21 @@ export function StatusDistributionChart({ data }) {
   }
 
   const chartData = {
-    labels: ['Entregues', 'Pendentes', 'Atrasadas'],
+    labels: ['Entregues', 'Pendentes', 'Entregas Atrasadas', 'Atrasadas'],
     datasets: [
       {
-        data: [delivered, pending, overdue],
+        data: [delivered, pending, lateDeliveries, overdue],
         backgroundColor: [
           'rgba(34, 197, 94, 0.8)',
           'rgba(249, 115, 22, 0.8)',
           'rgba(239, 68, 68, 0.8)',
+          'rgba(156, 163, 175, 0.8)',
         ],
         borderColor: [
           'rgba(34, 197, 94, 1)',
           'rgba(249, 115, 22, 1)',
           'rgba(239, 68, 68, 1)',
+          'rgba(156, 163, 175, 1)',
         ],
         borderWidth: 2,
       },

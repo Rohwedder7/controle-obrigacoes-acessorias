@@ -50,8 +50,15 @@ class Command(BaseCommand):
                 self.style.SUCCESS(f'✅ {overdue_count} notificação(ões) de atraso criada(s)')
             )
             
+            # 3. Verificar entregas atrasadas
+            self.stdout.write('\n⚠️ Verificando entregas atrasadas...')
+            late_deliveries_count = NotificationService.check_late_deliveries()
+            self.stdout.write(
+                self.style.SUCCESS(f'✅ {late_deliveries_count} notificação(ões) de entrega atrasada criada(s)')
+            )
+            
             # Resumo final
-            total = due_soon_count + overdue_count
+            total = due_soon_count + overdue_count + late_deliveries_count
             self.stdout.write('\n' + '='*60)
             self.stdout.write(
                 self.style.SUCCESS(f'✨ RESUMO: {total} notificação(ões) criada(s) no total')

@@ -3,6 +3,18 @@ import { getObligations, getCompanies, getStates, getObligationTypes, createObli
 import Layout from '../components/Layout'
 import { ChevronDown, ChevronUp, Edit3, Trash2, Filter, Search, CheckSquare, Square, AlertTriangle, Plus, Upload, List, RotateCcw } from 'lucide-react'
 
+// Função auxiliar para formatar datas corretamente (evita problema de timezone)
+function formatDate(dateString) {
+  if (!dateString) return ''
+  // Se a data já estiver no formato DD/MM/AAAA, retorna direto
+  if (dateString.includes('/')) {
+    return dateString
+  }
+  // Caso contrário, parsear corretamente sem interpretar como UTC
+  const [year, month, day] = dateString.split('T')[0].split('-')
+  return `${day}/${month}/${year}`
+}
+
 export default function Obligations(){
   const [items, setItems] = useState([])
   const [filteredItems, setFilteredItems] = useState([])
@@ -560,7 +572,7 @@ export default function Obligations(){
                           required
                         >
                           <option value="">Selecione uma empresa</option>
-                          {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+                          {companies.map(c=><option key={c.id} value={c.id}>[{c.code}] {c.name}</option>)}
                         </select>
                       </div>
                       
@@ -892,7 +904,7 @@ export default function Obligations(){
                                         ? 'bg-red-100 text-red-800' 
                                         : 'bg-green-100 text-green-800'
                                     }`}>
-                                      {new Date(o.due_date).toLocaleDateString('pt-BR')}
+                                      {formatDate(o.due_date)}
                                     </span>
                                     {o.due_date && (
                                       <span className="text-xs text-gray-500 mt-1">
@@ -906,7 +918,7 @@ export default function Obligations(){
                                 {o.delivery_deadline ? (
                                   <div className="flex flex-col">
                                     <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                      {new Date(o.delivery_deadline).toLocaleDateString('pt-BR')}
+                                      {formatDate(o.delivery_deadline)}
                                     </span>
                                     {o.delivery_deadline && o.due_date && (
                                       <span className="text-xs text-gray-500 mt-1">
@@ -919,8 +931,8 @@ export default function Obligations(){
                               <td className="p-3">{o.responsible_user?.username || '-'}</td>
                               <td className="p-3">
                                 <div className="text-xs">
-                                  <div>Início: {o.validity_start_date ? new Date(o.validity_start_date).toLocaleDateString('pt-BR') : '-'}</div>
-                                  <div>Fim: {o.validity_end_date ? new Date(o.validity_end_date).toLocaleDateString('pt-BR') : '-'}</div>
+                                  <div>Início: {o.validity_start_date ? formatDate(o.validity_start_date) : '-'}</div>
+                                  <div>Fim: {o.validity_end_date ? formatDate(o.validity_end_date) : '-'}</div>
                                 </div>
                               </td>
                               <td className="p-3">
@@ -1042,7 +1054,7 @@ export default function Obligations(){
                       >
                         <option value="">Selecione uma empresa</option>
                         {companies.map(company => (
-                          <option key={company.id} value={company.id}>{company.name}</option>
+                          <option key={company.id} value={company.id}>[{company.code}] {company.name}</option>
                         ))}
                       </select>
                     </div>

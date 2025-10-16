@@ -35,7 +35,7 @@ class CompanySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Company
-        fields = ['id', 'name', 'cnpj', 'fantasy_name', 'email', 'phone', 'address', 
+        fields = ['id', 'code', 'name', 'cnpj', 'fantasy_name', 'email', 'phone', 'address', 
                  'responsible', 'active', 'created_at', 'updated_at', 'obligations_count',
                  'pending_obligations', 'delivered_obligations']
         read_only_fields = ['created_at', 'updated_at']
@@ -164,7 +164,33 @@ class ObligationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
+        
+        # Garantir que as datas sejam objetos date (não datetime) para evitar problemas de timezone
+        from datetime import datetime as dt
+        if 'due_date' in validated_data and isinstance(validated_data['due_date'], dt):
+            validated_data['due_date'] = validated_data['due_date'].date()
+        if 'delivery_deadline' in validated_data and isinstance(validated_data['delivery_deadline'], dt):
+            validated_data['delivery_deadline'] = validated_data['delivery_deadline'].date()
+        if 'validity_start_date' in validated_data and isinstance(validated_data['validity_start_date'], dt):
+            validated_data['validity_start_date'] = validated_data['validity_start_date'].date()
+        if 'validity_end_date' in validated_data and isinstance(validated_data['validity_end_date'], dt):
+            validated_data['validity_end_date'] = validated_data['validity_end_date'].date()
+        
         return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        # Garantir que as datas sejam objetos date (não datetime) para evitar problemas de timezone
+        from datetime import datetime as dt
+        if 'due_date' in validated_data and isinstance(validated_data['due_date'], dt):
+            validated_data['due_date'] = validated_data['due_date'].date()
+        if 'delivery_deadline' in validated_data and isinstance(validated_data['delivery_deadline'], dt):
+            validated_data['delivery_deadline'] = validated_data['delivery_deadline'].date()
+        if 'validity_start_date' in validated_data and isinstance(validated_data['validity_start_date'], dt):
+            validated_data['validity_start_date'] = validated_data['validity_start_date'].date()
+        if 'validity_end_date' in validated_data and isinstance(validated_data['validity_end_date'], dt):
+            validated_data['validity_end_date'] = validated_data['validity_end_date'].date()
+        
+        return super().update(instance, validated_data)
 
 
 class NotificationSerializer(serializers.ModelSerializer):

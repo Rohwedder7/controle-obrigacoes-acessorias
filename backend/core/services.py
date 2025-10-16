@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Obligation, Notification, User, ObligationType, Company, State
+from django.db.models import Q
+from .models import Obligation, Notification, User, ObligationType, Company, State, Submission
 
 class NotificationService:
     """Serviço para gerenciar notificações do sistema"""
@@ -264,7 +265,16 @@ class NotificationService:
                     notifications_created += 1
             
             # Notificar administradores (com deduplicação)
-            admins = User.objects.filter(is_superuser=True)
+            # Buscar superusers e usuários no grupo Admin
+            from django.contrib.auth.models import Group
+            admin_group = Group.objects.filter(name='Admin').first()
+            if admin_group:
+                admins = User.objects.filter(
+                    Q(is_superuser=True) | Q(groups=admin_group)
+                ).distinct()
+            else:
+                admins = User.objects.filter(is_superuser=True)
+            
             for admin in admins:
                 title = f"🚨 Obrigação em atraso há {days_overdue} dia(s)"
                 message = (
@@ -280,6 +290,72 @@ class NotificationService:
                     title=title,
                     message=message,
                     priority='urgent'
+                )
+                if notification:
+                    notifications_created += 1
+        
+        return notifications_created
+    
+    @staticmethod
+    def check_late_deliveries():
+        """
+        Verifica entregas atrasadas (submissions após o vencimento da obrigação).
+        Notifica admins sobre entregas que foram feitas após o vencimento.
+        """
+        from django.contrib.auth.models import Group
+        from django.db.models import F
+        
+        today = timezone.now().date()
+        notifications_created = 0
+        
+        # Buscar todas as submissions feitas após o vencimento
+        submissions = Submission.objects.filter(
+            delivery_date__gt=F('obligation__due_date')
+        ).select_related(
+            'obligation__company',
+            'obligation__obligation_type',
+            'obligation__state',
+            'delivered_by'
+        )
+        
+        for submission in submissions:
+            days_late = (submission.delivery_date - submission.obligation.due_date).days
+            
+            # Notificar administradores sobre entrega atrasada
+            admin_group = Group.objects.filter(name='Admin').first()
+            if admin_group:
+                admins = User.objects.filter(
+                    Q(is_superuser=True) | Q(groups=admin_group)
+                ).distinct()
+            else:
+                admins = User.objects.filter(is_superuser=True)
+            
+            for admin in admins:
+                status_text = {
+                    'approved': 'Aprovada',
+                    'pending_review': 'Pendente de Revisão',
+                    'needs_revision': 'Necessita Revisão',
+                    'rejected': 'Recusada'
+                }.get(submission.approval_status, submission.approval_status)
+                
+                title = f"⚠️ Entrega atrasada - {days_late} dia(s) após vencimento"
+                message = (
+                    f"Uma entrega foi feita {days_late} dia(s) após o vencimento da obrigação "
+                    f"{submission.obligation.obligation_type.name} da empresa "
+                    f"{submission.obligation.company.name} ({submission.obligation.state.code}). "
+                    f"Vencimento: {submission.obligation.due_date.strftime('%d/%m/%Y')}. "
+                    f"Entrega: {submission.delivery_date.strftime('%d/%m/%Y')}. "
+                    f"Status: {status_text}. "
+                    f"Entregue por: {submission.delivered_by.username if submission.delivered_by else 'N/A'}."
+                )
+                
+                notification = NotificationService._create_deduplicated_notification(
+                    user=admin,
+                    obligation=submission.obligation,
+                    notification_type='overdue',
+                    title=title,
+                    message=message,
+                    priority='high'
                 )
                 if notification:
                     notifications_created += 1

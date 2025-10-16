@@ -1,0 +1,103 @@
+================================================================================
+                    🔧 SOLUÇÃO FINAL - TEMPLATE CORRETO
+================================================================================
+
+O template está CORRETO no arquivo, mas o Django está usando cache!
+
+================================================================================
+                    ✅ TEMPLATE VERIFICADO NO ARQUIVO
+================================================================================
+
+Cabeçalhos: ['Código', 'Razão Social', 'CNPJ', 'Nome Fantasia', 'E-mail', 'Telefone', 'Endereço', 'Responsável']
+
+O arquivo está correto! O problema é cache do Django.
+
+================================================================================
+                    🔧 SOLUÇÃO - SIGA ESTES PASSOS
+================================================================================
+
+PASSO 1: PARAR O SERVIDOR DJANGO COMPLETAMENTE
+
+1. No terminal do Django, pressione Ctrl+C
+2. Aguarde até ver a mensagem "KeyboardInterrupt"
+3. Feche o terminal completamente
+
+PASSO 2: LIMPAR CACHE DO DJANGO
+
+Execute este comando:
+python backend/manage.py shell -c "from django.core.cache import cache; cache.clear(); print('Cache limpo!')"
+
+PASSO 3: REINICIAR O SERVIDOR DJANGO
+
+1. Abra um NOVO terminal
+2. Execute:
+   cd backend
+   python manage.py runserver
+
+PASSO 4: LIMPAR CACHE DO NAVEGADOR
+
+1. Pressione Ctrl+Shift+Del
+2. Selecione "Imagens e arquivos em cache"
+3. Limpe os dados
+
+PASSO 5: BAIXAR O TEMPLATE
+
+1. Acesse http://localhost:5173
+2. Vá em "Empresas"
+3. Clique em "Baixar Template"
+
+PASSO 6: VERIFICAR OS LOGS
+
+Olhe no terminal do Django e procure por:
+DEBUG: Template companies - Cabeçalhos: ['Código', 'Razão Social', 'CNPJ', ...]
+
+Se ainda mostrar ['Nome da Empresa', ...], o problema é cache do Python.
+
+================================================================================
+                    🔧 SOLUÇÃO ALTERNATIVA - RECRIAR ARQUIVO
+================================================================================
+
+Se o problema persistir, vamos recriar o arquivo com um timestamp:
+
+1. Pare o servidor Django (Ctrl+C)
+2. Execute este comando:
+
+python -c "import os, shutil; from openpyxl import Workbook; from openpyxl.styles import Font, PatternFill, Alignment; os.makedirs('backend/media/templates', exist_ok=True); wb = Workbook(); ws = wb.active; ws.title = 'Empresas'; headers = ['Código', 'Razão Social', 'CNPJ', 'Nome Fantasia', 'E-mail', 'Telefone', 'Endereço', 'Responsável']; ws.append(headers); ws.append(['EMP001', 'Empresa Exemplo Ltda', '12345678000190', 'Exemplo', 'contato@exemplo.com', '(11) 99999-9999', 'Rua Exemplo, 123', 'João Silva']); header_font = Font(bold=True, color='FFFFFF', size=11); header_fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid'); header_alignment = Alignment(horizontal='center', vertical='center'); [setattr(ws.cell(row=1, column=i+1), attr, val) for i, cell in enumerate(ws[1]) for attr, val in [('font', header_font), ('fill', header_fill), ('alignment', header_alignment)]]; ws.column_dimensions['A'].width = 15; ws.column_dimensions['B'].width = 40; ws.column_dimensions['C'].width = 18; ws.column_dimensions['D'].width = 30; ws.column_dimensions['E'].width = 30; ws.column_dimensions['F'].width = 18; ws.column_dimensions['G'].width = 40; ws.column_dimensions['H'].width = 25; ws.freeze_panes = 'A2'; ws.auto_filter.ref = 'A1:H1'; wb.save('backend/media/templates/template_empresas.xlsx'); print('✅ Template recriado com sucesso!')"
+
+3. Reinicie o servidor Django
+4. Baixe o template novamente
+
+================================================================================
+                    🎯 VERIFICAÇÃO FINAL
+================================================================================
+
+Após seguir os passos acima, verifique:
+
+LOGS DO DJANGO:
+DEBUG: Template companies - Cabeçalhos: ['Código', 'Razão Social', 'CNPJ', ...]
+✅ Deve mostrar 'Código' como primeira coluna
+
+ARQUIVO EXCEL:
+┌──────────┬──────────────────────┬──────────────────┬─────────────────┐
+│ Código   │ Razão Social         │ CNPJ             │ Nome Fantasia   │
+├──────────┼──────────────────────┼──────────────────┼─────────────────┤
+│ EMP001   │ Empresa Exemplo Ltda │ 12345678000190   │ Exemplo         │
+└──────────┴──────────────────────┴──────────────────┴─────────────────┘
+✅ Deve mostrar 'Código' como primeira coluna
+
+================================================================================
+                    📞 SE O PROBLEMA PERSISTIR
+================================================================================
+
+Me envie:
+1. Os logs do Django após baixar o template
+2. Uma captura de tela do arquivo Excel baixado
+
+Com essas informações posso identificar se é um problema de cache do Python ou do navegador.
+
+================================================================================
+
+                    SIGA OS PASSOS ACIMA COM ATENÇÃO! 🔧
+
+================================================================================
+

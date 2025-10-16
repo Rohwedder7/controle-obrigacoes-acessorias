@@ -1,0 +1,157 @@
+================================================================================
+                    SOLUCAO: PROBLEMA NO DASHBOARD
+================================================================================
+
+PROBLEMA IDENTIFICADO:
+
+1. Dashboard nao mostrava entregas atrasadas
+2. Admins nao recebiam notificacoes sobre entregas atrasadas
+
+CAUSA RAIZ:
+
+A query estava buscando apenas submissions com status 'pending_review' ou
+'needs_revision', mas as entregas atrasadas ja foram aprovadas (status
+'approved').
+
+CORRECOES APLICADAS:
+
+1. BACKEND - views.py
+   - Removido filtro de approval_status da query
+   - Agora busca TODAS as submissions feitas apos o vencimento
+   - Query: Submission.objects.filter(delivery_date__gt=F('obligation__due_date'))
+
+2. BACKEND - services.py
+   - Adicionado import de Submission e Q
+   - Removido filtro de approval_status da funcao check_late_deliveries()
+   - Agora notifica sobre TODAS as entregas atrasadas, independente do status
+
+3. BACKEND - check_late_deliveries.py
+   - Removidos emojis para evitar problemas de encoding no Windows
+
+================================================================================
+                    COMO FUNCIONA AGORA
+================================================================================
+
+CALCULO DE ENTREGAS ATRASADAS:
+
+1. Sistema busca TODAS as submissions onde:
+   delivery_date > obligation.due_date
+
+2. Para cada entrega atrasada:
+   - Calcula dias de atraso
+   - Notifica TODOS os admins
+   - Mensagem inclui status da aprovação
+
+3. Dashboard mostra:
+   - late_deliveries: Total de entregas feitas apos vencimento
+   - Grafico exibe categoria "Entregas Atrasadas" em vermelho
+
+NOTIFICACOES:
+
+1. Sistema identifica entregas feitas apos o vencimento
+2. Notifica TODOS os admins (superusers + grupo Admin)
+3. Mensagem inclui:
+   - Dias de atraso
+   - Empresa
+   - Obrigacao
+   - Data de vencimento
+   - Data de entrega
+   - Status da aprovacao
+   - Quem entregou
+
+DEDUPLICACAO:
+
+- Notificacoes sao deduplicadas por dia
+- Uma notificacao por obrigacao por dia
+- Evita spam de notificacoes
+
+================================================================================
+                    COMO TESTAR
+================================================================================
+
+PASSO 1: REINICIAR O SERVIDOR
+
+   cd backend
+   python manage.py runserver
+
+PASSO 2: LIMPAR O CACHE DO NAVEGADOR
+
+   Pressione Ctrl+Shift+R
+
+PASSO 3: VERIFICAR DASHBOARD
+
+   1. Acesse http://localhost:5173
+   2. Va em "Dashboard"
+   3. Verifique o grafico "Distribuicao de Status"
+   4. Deve mostrar "Entregas Atrasadas" em vermelho
+
+PASSO 4: EXECUTAR COMANDO DE NOTIFICACOES
+
+   cd backend
+   python manage.py check_late_deliveries
+
+PASSO 5: VERIFICAR NOTIFICACOES
+
+   1. Acesse http://localhost:5173
+   2. Va em "Notificacoes"
+   3. Verifique se ha notificacoes de entregas atrasadas
+
+================================================================================
+                    VERIFICACAO MANUAL
+================================================================================
+
+Para verificar quantas entregas atrasadas existem:
+
+   cd backend
+   python manage.py shell
+   >>> from core.models import Submission
+   >>> from django.db.models import F
+   >>> count = Submission.objects.filter(delivery_date__gt=F('obligation__due_date')).count()
+   >>> print(f'Entregas atrasadas: {count}')
+
+Para verificar notificacoes criadas:
+
+   >>> from core.models import Notification
+   >>> notifs = Notification.objects.filter(type='overdue')
+   >>> print(f'Notificacoes de atraso: {notifs.count()}')
+   >>> for n in notifs[:5]:
+   ...     print(f'{n.title} - {n.created_at}')
+
+================================================================================
+                    ARQUIVOS MODIFICADOS
+================================================================================
+
+1. backend/core/views.py
+   - Linha 799-802: Query de entregas atrasadas
+   - Removido filtro de approval_status
+
+2. backend/core/services.py
+   - Linha 9: Adicionado import de Q
+   - Linha 10: Adicionado import de Submission
+   - Linha 311-312: Query de entregas atrasadas
+   - Removido filtro de approval_status
+
+3. backend/core/management/commands/check_late_deliveries.py
+   - Linha 16 e 22: Removidos emojis
+
+================================================================================
+                    CHECKLIST
+================================================================================
+
+- [x] Backend busca entregas atrasadas corretamente
+- [x] Dashboard exibe entregas atrasadas
+- [x] Admins sao notificados sobre entregas atrasadas
+- [x] Comando de verificacao funciona
+- [x] Sem erros de lint
+- [x] Sem problemas de encoding
+
+================================================================================
+
+                    CORRECOES APLICADAS COM SUCESSO! ✅
+
+================================================================================
+
+REINICIE O SERVIDOR E TESTE AS CORRECOES!
+
+================================================================================
+

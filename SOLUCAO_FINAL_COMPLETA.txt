@@ -1,0 +1,129 @@
+================================================================================
+                    ✅ SOLUÇÃO FINAL - TEMPLATE CORRETO
+================================================================================
+
+O arquivo template_empresas.xlsx ESTÁ CRIADO E VÁLIDO!
+
+================================================================================
+                    📂 LOCALIZAÇÃO DO ARQUIVO
+================================================================================
+
+Caminho completo:
+C:\Users\willr\OneDrive\Documentos\Controle de Obrigações Acessórias\backend\media\templates\template_empresas.xlsx
+
+Verificação:
+✅ Arquivo existe: SIM
+✅ Tamanho: 5313 bytes
+✅ Arquivo válido: SIM
+✅ Cabeçalhos corretos: SIM
+   - Primeira coluna: "Código"
+   - Segunda coluna: "Razão Social"
+   - Terceira coluna: "CNPJ"
+
+================================================================================
+                    🔧 SE NÃO ESTÁ VENDO O ARQUIVO
+================================================================================
+
+OPCAO 1: Abrir a pasta diretamente
+Execute: abrir_pasta_templates.bat
+
+OPCAO 2: Atualizar o explorador
+1. Abra o explorador de arquivos
+2. Navegue até: backend/media/templates/
+3. Pressione F5 para atualizar
+
+OPCAO 3: Copiar o caminho
+Cole no explorador:
+C:\Users\willr\OneDrive\Documentos\Controle de Obrigações Acessórias\backend\media\templates
+
+================================================================================
+                    🚀 PRÓXIMOS PASSOS
+================================================================================
+
+PASSO 1: REINICIAR O SERVIDOR DJANGO
+
+1. Pare o servidor Django (Ctrl+C)
+2. Reinicie:
+   cd backend
+   python manage.py runserver
+
+IMPORTANTE: Mantenha o terminal aberto para ver os logs!
+
+PASSO 2: LIMPAR CACHE DO NAVEGADOR
+
+1. Pressione Ctrl+Shift+Del
+2. Selecione "Imagens e arquivos em cache"
+3. Limpe os dados
+
+PASSO 3: BAIXAR O TEMPLATE
+
+1. Acesse http://localhost:5173
+2. Vá em "Empresas"
+3. Clique em "Baixar Template"
+
+PASSO 4: VERIFICAR OS LOGS
+
+Olhe no terminal do Django e procure por:
+DEBUG: Template companies - Cabeçalhos: ['Código', 'Razão Social', 'CNPJ', ...]
+
+Se mostrar ['Código', ...] = CORRETO ✅
+Se mostrar ['Nome da Empresa', ...] = INCORRETO ❌
+
+================================================================================
+                    📋 ESTRUTURA DO TEMPLATE CORRETO
+================================================================================
+
+┌──────────┬──────────────────────┬──────────────────┬─────────────────┐
+│ Código   │ Razão Social         │ CNPJ             │ Nome Fantasia   │
+├──────────┼──────────────────────┼──────────────────┼─────────────────┤
+│ EMP001   │ Empresa Exemplo Ltda │ 12345678000190   │ Exemplo         │
+└──────────┴──────────────────────┴──────────────────┴─────────────────┘
+
+Colunas:
+1. Código (obrigatório)
+2. Razão Social (obrigatório)
+3. CNPJ (opcional)
+4. Nome Fantasia (opcional)
+5. E-mail (opcional)
+6. Telefone (opcional)
+7. Endereço (opcional)
+8. Responsável (opcional)
+
+================================================================================
+                    🔍 VERIFICAÇÃO FINAL
+================================================================================
+
+Para verificar se o template está correto, execute:
+
+python -c "from openpyxl import load_workbook; wb = load_workbook(r'C:\Users\willr\OneDrive\Documentos\Controle de Obrigações Acessórias\backend\media\templates\template_empresas.xlsx'); ws = wb.active; print('Cabeçalhos:', [cell.value for cell in ws[1]])"
+
+Deve mostrar:
+Cabeçalhos: ['Código', 'Razão Social', 'CNPJ', 'Nome Fantasia', 'E-mail', 'Telefone', 'Endereço', 'Responsável']
+
+================================================================================
+                    📞 SE O PROBLEMA PERSISTIR
+================================================================================
+
+1. Verifique se o servidor Django foi reiniciado
+2. Verifique se o cache do navegador foi limpo
+3. Verifique os logs do Django
+4. Me envie os logs para análise
+
+================================================================================
+                    ✅ CHECKLIST
+================================================================================
+
+- [ ] Arquivo template_empresas.xlsx existe em backend/media/templates/
+- [ ] Arquivo tem 5313 bytes
+- [ ] Arquivo tem cabeçalhos corretos
+- [ ] Servidor Django reiniciado
+- [ ] Cache do navegador limpo
+- [ ] Template baixado novamente
+- [ ] Logs do Django verificados
+
+================================================================================
+
+                    O ARQUIVO ESTÁ CORRETO E PRONTO PARA USO! ✅
+
+================================================================================
+

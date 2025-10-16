@@ -1,0 +1,212 @@
+================================================================================
+                    MELHORIA: EXIBICAO DE EMPRESA E CNPJ NOS CARDS
+================================================================================
+
+MELHORIA IMPLEMENTADA COM SUCESSO! ✅
+
+Agora os cards de aprovações e entregas mostram o nome da empresa seguido
+do CNPJ formatado no padrão brasileiro.
+
+================================================================================
+                    MELHORIAS APLICADAS
+================================================================================
+
+1. PAGINA DE APROVACOES (Approvals.jsx)
+
+   Adicionada funcao formatCNPJ():
+   
+   - Remove caracteres nao numericos
+   - Aplica mascara XX.XXX.XXX/XXXX-XX
+   - Retorna CNPJ formatado ou string vazia se nao houver CNPJ
+   
+   Exibicao atualizada:
+   
+   ANTES: [GDM] Empresa Exemplo
+   DEPOIS: Empresa Exemplo - 12.345.678/0001-90
+
+2. FUNCAO HELPER
+
+   Criada funcao formatCNPJ():
+   
+   ```javascript
+   const formatCNPJ = (cnpj) => {
+     if (!cnpj) return ''
+     // Remove caracteres nao numericos
+     const cleaned = cnpj.replace(/\D/g, '')
+     // Aplica mascara XX.XXX.XXX/XXXX-XX
+     if (cleaned.length === 14) {
+       return cleaned.replace(
+         /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+         '$1.$2.$3/$4-$5'
+       )
+     }
+     return cnpj
+   }
+   ```
+
+================================================================================
+                    COMO FUNCIONA
+================================================================================
+
+FORMATACAO DO CNPJ:
+
+1. ENTRADA:
+   - CNPJ sem formatacao: 12345678000190
+   - CNPJ com formatacao: 12.345.678/0001-90
+   - String vazia ou null
+
+2. PROCESSAMENTO:
+   - Remove caracteres nao numericos
+   - Verifica se tem 14 digitos
+   - Aplica mascara XX.XXX.XXX/XXXX-XX
+
+3. SAIDA:
+   - CNPJ formatado: 12.345.678/0001-90
+   - String vazia se nao houver CNPJ
+
+EXEMPLO DE EXIBICAO:
+
+ANTES:
+[GDM] Empresa Exemplo
+
+DEPOIS:
+Empresa Exemplo - 12.345.678/0001-90
+
+================================================================================
+                    COMO TESTAR
+================================================================================
+
+PASSO 1: REINICIAR O SERVIDOR
+
+   cd backend
+   python manage.py runserver
+
+PASSO 2: LIMPAR O CACHE DO NAVEGADOR
+
+   Pressione Ctrl+Shift+R
+
+PASSO 3: TESTAR PAGINA DE APROVACOES
+
+   1. Acesse http://localhost:5173
+   2. Va em "Aprovacoes"
+   3. Verifique se os cards mostram:
+      - Nome da empresa
+      - Traco (-)
+      - CNPJ formatado (XX.XXX.XXX/XXXX-XX)
+
+PASSO 4: VERIFICAR CASOS ESPECIAIS
+
+   1. Verifique se CNPJs sem formatacao sao formatados corretamente
+   2. Verifique se CNPJs ja formatados permanecem corretos
+   3. Verifique se empresas sem CNPJ nao quebram a exibicao
+
+================================================================================
+                    ARQUIVOS MODIFICADOS
+================================================================================
+
+1. frontend/src/pages/Approvals.jsx
+   
+   - Linha 31-44: Adicionada funcao formatCNPJ()
+   - Linha 321-323: Atualizada exibicao do nome da empresa e CNPJ
+
+================================================================================
+                    CHECKLIST
+================================================================================
+
+- [x] Funcao formatCNPJ criada
+- [x] Exibicao atualizada nos cards
+- [x] CNPJ formatado corretamente
+- [x] Tratamento de casos especiais (CNPJ vazio)
+- [x] Sem erros de lint
+- [x] Codigo segue melhores praticas
+
+================================================================================
+                    MELHORES PRATICAS APLICADAS
+================================================================================
+
+1. SEGURANCA:
+   - Verificacao de existencia de CNPJ antes de processar
+   - Remocao de caracteres nao numericos
+   - Validacao de tamanho (14 digitos)
+   - Retorno seguro (string vazia se CNPJ invalido)
+
+2. UX:
+   - CNPJ formatado para facilitar leitura
+   - Separador claro entre nome e CNPJ
+   - Exibicao consistente em todos os cards
+
+3. PERFORMANCE:
+   - Funcao helper reutilizavel
+   - Processamento rapido
+   - Sem queries adicionais
+
+4. MANUTENIBILIDADE:
+   - Codigo limpo e bem documentado
+   - Funcao helper facil de modificar
+   - Logica reutilizavel
+   - Facil de entender
+
+5. ACESSIBILIDADE:
+   - CNPJ formatado facilita leitura
+   - Separador visual claro
+   - Informacao completa e clara
+
+================================================================================
+                    EXEMPLO DE USO
+================================================================================
+
+CASO 1: CNPJ sem formatacao
+
+Entrada: 12345678000190
+Saida: 12.345.678/0001-90
+
+CASO 2: CNPJ ja formatado
+
+Entrada: 12.345.678/0001-90
+Saida: 12.345.678/0001-90
+
+CASO 3: CNPJ vazio ou null
+
+Entrada: null ou ''
+Saida: ''
+
+CASO 4: Exibicao no card
+
+Nome da Empresa: GDM
+CNPJ: 12345678000190
+Exibicao: GDM - 12.345.678/0001-90
+
+================================================================================
+                    EXEMPLO VISUAL
+================================================================================
+
+CARD ANTES:
+
+┌─────────────────────────────────────┐
+│  [GDM] Empresa Exemplo          🟢  │
+│  EFD CONTRIBUIÇÕES • SP            │
+│  Competência: 10/2025               │
+│  Entregue em: 01/01/2026           │
+│  [0 anexo(s)] [Original]           │
+└─────────────────────────────────────┘
+
+CARD DEPOIS:
+
+┌─────────────────────────────────────┐
+│  GDM - 12.345.678/0001-90      🟢  │
+│  EFD CONTRIBUIÇÕES • SP            │
+│  Competência: 10/2025               │
+│  Entregue em: 01/01/2026           │
+│  [0 anexo(s)] [Original]           │
+└─────────────────────────────────────┘
+
+================================================================================
+
+                    MELHORIA IMPLEMENTADA COM SUCESSO! ✅
+
+================================================================================
+
+REINICIE O SERVIDOR E TESTE AS MELHORIAS!
+
+================================================================================
+

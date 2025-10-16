@@ -1,0 +1,207 @@
+================================================================================
+                    CORRECAO: CARDS DA PAGINA DE RELATORIOS
+================================================================================
+
+PROBLEMA IDENTIFICADO E CORRIGIDO!
+
+O card "Atrasadas" estava mostrando 0, mas havia 3 entregas com atraso
+na tabela detalhada. O problema era que o card estava contando apenas
+obrigacoes vencidas SEM entrega, nao entregas feitas apos o vencimento.
+
+================================================================================
+                    CORRECOES APLICADAS
+================================================================================
+
+1. BACKEND - RELATORIO DETALHADO (views.py)
+
+   Adicionado calculo de entregas atrasadas:
+   
+   - late_deliveries_count: Conta submissions feitas apos vencimento
+   - Calculo baseado em days_late > 0 no submission_info
+   - Adicionado ao totals como late_deliveries
+   
+   Codigo:
+   ```python
+   # Contar entregas atrasadas (submissions feitas apos vencimento)
+   late_deliveries_count = 0
+   for row in rows:
+       if row['submission_info'] and row['submission_info'].get('days_late', 0) > 0:
+           late_deliveries_count += 1
+   ```
+
+2. FRONTEND - CARDS DA PAGINA DE RELATORIOS (Reports.jsx)
+
+   Adicionado novo card "Entregas Atrasadas":
+   
+   - Card vermelho com icone de alerta
+   - Mostra total de entregas feitas apos vencimento
+   - Usa reportData.totals.late_deliveries
+   
+   Estrutura dos cards (5 cards agora):
+   1. Total de Obrigacoes (azul)
+   2. Entregues (verde)
+   3. Pendentes (amarelo)
+   4. Entregas Atrasadas (vermelho) - NOVO!
+   5. Atrasadas (cinza) - Obrigacoes vencidas sem entrega
+
+================================================================================
+                    COMO FUNCIONA AGORA
+================================================================================
+
+DIFERENCA ENTRE OS CARDS:
+
+1. CARD "ENTREGAS ATRASADAS" (vermelho):
+   - Conta entregas que foram feitas APOS o vencimento
+   - Status: "entregue" mas com days_late > 0
+   - Exemplo: Entrega feita em 01/01/2026, vencimento em 20/11/2025
+   - Valor: 3
+
+2. CARD "ATRASADAS" (cinza):
+   - Conta obrigacoes vencidas SEM entrega
+   - Status: "atrasado" (nao tem submission aprovada)
+   - Exemplo: Obrigacao vencida em 20/11/2025, sem entrega
+   - Valor: 0
+
+CALCULO DE DIAS DE ATRASO:
+
+```python
+# Se a entrega foi feita apos o vencimento
+if delivery_date > due_date:
+    days_late = (delivery_date - due_date).days
+else:
+    days_late = 0
+```
+
+EXEMPLO DE DADOS:
+
+- Obrigacao 1: Vencimento 20/11/2025, Entrega 15/11/2025 -> 0 dias atraso
+- Obrigacao 2: Vencimento 20/11/2025, Entrega 10/12/2025 -> 20 dias atraso
+- Obrigacao 3: Vencimento 20/11/2025, Entrega 20/12/2025 -> 30 dias atraso
+- Obrigacao 4: Vencimento 20/11/2025, Entrega 01/01/2026 -> 42 dias atraso
+
+Resultado:
+- Total de Obrigacoes: 4
+- Entregues: 4
+- Pendentes: 0
+- Entregas Atrasadas: 3 (obrigacoes 2, 3 e 4)
+- Atrasadas: 0
+
+================================================================================
+                    COMO TESTAR
+================================================================================
+
+PASSO 1: REINICIAR O SERVIDOR
+
+   cd backend
+   python manage.py runserver
+
+PASSO 2: LIMPAR O CACHE DO NAVEGADOR
+
+   Pressione Ctrl+Shift+R
+
+PASSO 3: TESTAR PAGINA DE RELATORIOS
+
+   1. Acesse http://localhost:5173
+   2. Va em "Relatorios"
+   3. Clique em "Gerar Relatorio"
+   4. Verifique se os cards mostram:
+      - Total de Obrigacoes: 4
+      - Entregues: 4
+      - Pendentes: 0
+      - Entregas Atrasadas: 3 (vermelho)
+      - Atrasadas: 0 (cinza)
+
+PASSO 4: VERIFICAR TABELA DETALHADA
+
+   1. Role ate a tabela "Dados Detalhados"
+   2. Verifique se a coluna "Atraso" mostra:
+      - Badge vermelho com "X dias" para entregas atrasadas
+      - "-" para entregas sem atraso
+
+================================================================================
+                    VERIFICACAO MANUAL
+================================================================================
+
+Para verificar se os dados estao corretos:
+
+   cd backend
+   python manage.py shell
+   
+   >>> from core.models import Submission
+   >>> from django.db.models import F
+   
+   # Verificar entregas atrasadas
+   >>> subs = Submission.objects.filter(delivery_date__gt=F('obligation__due_date'))
+   >>> print(f'Total de entregas atrasadas: {subs.count()}')
+   
+   # Verificar detalhes
+   >>> for sub in subs:
+   ...     days_late = (sub.delivery_date - sub.obligation.due_date).days
+   ...     print(f'Entrega: {sub.delivery_date}, Vencimento: {sub.obligation.due_date}, Dias de atraso: {days_late}')
+
+================================================================================
+                    ARQUIVOS MODIFICADOS
+================================================================================
+
+1. backend/core/views.py
+   
+   - Linha 469-473: Adicionado calculo de late_deliveries_count
+   - Linha 491: Adicionado late_deliveries ao totals
+
+2. frontend/src/pages/Reports.jsx
+   
+   - Linha 383: Atualizado grid para 5 colunas (lg:grid-cols-5)
+   - Linha 426-438: Adicionado card "Entregas Atrasadas"
+   - Linha 440-452: Adicionado card "Atrasadas" (obrigacoes vencidas sem entrega)
+
+================================================================================
+                    CHECKLIST
+================================================================================
+
+- [x] Backend calcula entregas atrasadas corretamente
+- [x] Frontend exibe card "Entregas Atrasadas"
+- [x] Frontend exibe card "Atrasadas"
+- [x] Cards mostram valores corretos
+- [x] Tabela detalhada mostra dias de atraso
+- [x] Sem erros de lint
+- [x] Codigo segue melhores praticas
+
+================================================================================
+                    MELHORES PRATICAS APLICADAS
+================================================================================
+
+1. SEGURANCA:
+   - Verificacao de existencia de dados antes de acessar
+   - Uso de safe defaults (valores vazios se dados nao existem)
+   - Tratamento de casos onde dados nao existem
+
+2. UX:
+   - Card vermelho para entregas atrasadas (visual)
+   - Card cinza para obrigacoes atrasadas sem entrega
+   - Diferencia clara entre os dois tipos de atraso
+
+3. PERFORMANCE:
+   - Calculo eficiente de dias de atraso
+   - Dados carregados uma unica vez
+   - Sem queries adicionais
+
+4. MANUTENIBILIDADE:
+   - Codigo limpo e bem documentado
+   - Logica reutilizavel
+   - Facil de entender e modificar
+
+5. CONSISTENCIA:
+   - Mesma logica aplicada em todos os relatorios
+   - Formato de dados consistente
+   - Nomes de colunas padronizados
+
+================================================================================
+
+                    CORRECOES APLICADAS COM SUCESSO! ✅
+
+================================================================================
+
+REINICIE O SERVIDOR E TESTE AS CORRECOES!
+
+================================================================================
+

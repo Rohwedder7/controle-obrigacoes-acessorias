@@ -8,6 +8,7 @@ const Companies = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
   const [formData, setFormData] = useState({
+    code: '',
     name: '',
     cnpj: '',
     fantasy_name: '',
@@ -71,6 +72,7 @@ const Companies = () => {
         setShowForm(false);
         setEditingCompany(null);
         setFormData({
+          code: '',
           name: '',
           cnpj: '',
           fantasy_name: '',
@@ -89,6 +91,7 @@ const Companies = () => {
   const handleEdit = (company) => {
     setEditingCompany(company);
     setFormData({
+      code: company.code || '',
       name: company.name || '',
       cnpj: company.cnpj || '',
       fantasy_name: company.fantasy_name || '',
@@ -259,7 +262,12 @@ const Companies = () => {
             <div key={company.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{company.name}</h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                      {company.code}
+                    </span>
+                    <h3 className="text-lg font-semibold text-gray-900">{company.name}</h3>
+                  </div>
                   {company.fantasy_name && (
                     <p className="text-sm text-gray-600 mb-2">({company.fantasy_name})</p>
                   )}
@@ -382,6 +390,23 @@ const Companies = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={editingCompany ? true : false}
+                  />
+                  {editingCompany && (
+                    <p className="text-xs text-gray-500 mt-1">O código não pode ser alterado após a criação</p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Razão Social *

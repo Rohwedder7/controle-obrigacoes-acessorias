@@ -3,6 +3,18 @@ import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { ComplianceChart, StatusDistributionChart, MonthlyTrendChart, UserPerformanceChart } from '../components/DashboardCharts';
 
+// Função auxiliar para formatar datas corretamente (evita problema de timezone)
+function formatDate(dateString) {
+  if (!dateString) return ''
+  // Se a data já estiver no formato DD/MM/AAAA, retorna direto
+  if (dateString.includes('/')) {
+    return dateString
+  }
+  // Caso contrário, parsear corretamente sem interpretar como UTC
+  const [year, month, day] = dateString.split('T')[0].split('-')
+  return `${day}/${month}/${year}`
+}
+
 function Dashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -384,7 +396,7 @@ function Dashboard() {
                     </span>
                   </div>
                   <div className="text-xs text-red-600">
-                    Vencimento: {new Date(obligation.due_date).toLocaleDateString('pt-BR')}
+                    Vencimento: {formatDate(obligation.due_date)}
                   </div>
                 </div>
               ))}
@@ -448,7 +460,7 @@ function Dashboard() {
                     </span>
                   </div>
                   <div className="text-xs text-orange-600">
-                    Vencimento: {new Date(obligation.due_date).toLocaleDateString('pt-BR')}
+                    Vencimento: {formatDate(obligation.due_date)}
                   </div>
                 </div>
               ))}
@@ -580,7 +592,7 @@ function Dashboard() {
                       <span className="text-2xl">{getStatusIcon(company.pending_count, company.delivered_count)}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{company.name}</div>
+                      <div className="text-sm font-medium text-gray-900">[{company.code}] {company.name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-500 font-mono">

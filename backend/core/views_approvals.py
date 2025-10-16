@@ -43,7 +43,7 @@ def audit_approval_action(user, submission, action, comment=None):
 def pending_approvals(request):
     """
     GET /api/approvals/pending/
-    Lista submissions pendentes de aprovação (somente Admin/Aprovador)
+    Lista submissions para aprovação (somente Admin/Aprovador)
     
     Query params:
     - company: ID da empresa
@@ -51,13 +51,12 @@ def pending_approvals(request):
     - search: busca por nome de empresa ou obrigação
     - start_date: data inicial
     - end_date: data final
+    - status: filtro por status (pending_review, approved, rejected, needs_revision)
     """
     from django.db.models import Q
     
-    # Query base - apenas pendentes
-    queryset = Submission.objects.filter(
-        approval_status='pending_review'
-    ).select_related(
+    # Query base - TODAS as entregas (não apenas pendentes)
+    queryset = Submission.objects.all().select_related(
         'obligation__company',
         'obligation__state',
         'obligation__obligation_type',
@@ -71,6 +70,11 @@ def pending_approvals(request):
     search = request.GET.get('search', '').strip()
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    status_filter = request.GET.get('status')
+    
+    # Filtro por status (se não especificado, mostra todos)
+    if status_filter:
+        queryset = queryset.filter(approval_status=status_filter)
     
     if company_id:
         queryset = queryset.filter(obligation__company_id=company_id)
@@ -117,6 +121,14 @@ def pending_approvals(request):
                 'uploaded_at': att.created_at.isoformat()
             })
         
+        # Informações de status e decisão
+        status_info = {
+            'pending_review': {'label': 'Pendente de Revisão', 'icon': '⏳', 'color': 'gray'},
+            'approved': {'label': 'Aprovada', 'icon': '✅', 'color': 'green'},
+            'rejected': {'label': 'Recusada', 'icon': '❌', 'color': 'red'},
+            'needs_revision': {'label': 'Necessita Revisão', 'icon': '⚠️', 'color': 'yellow'}
+        }
+        
         results.append({
             'id': submission.id,
             'company': {
@@ -143,7 +155,15 @@ def pending_approvals(request):
             'comments': submission.comments,
             'attachments_count': attachments_count,
             'attachments': attachments_list,
-            'approval_status': submission.approval_status
+            'approval_status': submission.approval_status,
+            'approval_comment': submission.approval_comment,
+            'approval_decision_at': submission.approval_decision_at.isoformat() if submission.approval_decision_at else None,
+            'approval_decision_by': {
+                'id': submission.approval_decision_by.id if submission.approval_decision_by else None,
+                'username': submission.approval_decision_by.username if submission.approval_decision_by else None,
+                'full_name': f"{submission.approval_decision_by.first_name} {submission.approval_decision_by.last_name}".strip() if submission.approval_decision_by else None
+            },
+            'status_info': status_info.get(submission.approval_status, {})
         })
     
     return Response({

@@ -187,7 +187,7 @@ export default function Planning() {
                     >
                       <option value="">Todas as empresas</option>
                       {companies.map(company => (
-                        <option key={company.id} value={company.id}>{company.name}</option>
+                        <option key={company.id} value={company.id}>[{company.code}] {company.name}</option>
                       ))}
                     </select>
                   </div>

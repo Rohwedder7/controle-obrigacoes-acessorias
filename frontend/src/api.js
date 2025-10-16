@@ -602,6 +602,7 @@ export async function getPendingApprovals(filters = {}) {
   if (filters.search) params.append('search', filters.search)
   if (filters.start_date) params.append('start_date', filters.start_date)
   if (filters.end_date) params.append('end_date', filters.end_date)
+  if (filters.status) params.append('status', filters.status)  // Filtro de status
   
   const queryString = params.toString()
   const url = queryString ? `/approvals/pending/?${queryString}` : '/approvals/pending/'

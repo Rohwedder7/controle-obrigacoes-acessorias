@@ -8,6 +8,7 @@ class State(models.Model):
     def __str__(self): return f"{self.code} - {self.name}"
 
 class Company(models.Model):
+    code = models.CharField(max_length=50, unique=True, verbose_name="Código", help_text="Código único da empresa")
     name = models.CharField(max_length=200, verbose_name="Razão Social")
     cnpj = models.CharField(max_length=18, blank=True, null=True, verbose_name="CNPJ")
     fantasy_name = models.CharField(max_length=200, blank=True, null=True, verbose_name="Nome Fantasia")
@@ -22,10 +23,10 @@ class Company(models.Model):
     class Meta:
         verbose_name = "Empresa"
         verbose_name_plural = "Empresas"
-        ordering = ['name']
+        ordering = ['code']
     
     def __str__(self): 
-        return f"{self.name} ({self.cnpj})" if self.cnpj else self.name
+        return f"[{self.code}] {self.name} ({self.cnpj})" if self.cnpj else f"[{self.code}] {self.name}"
 
 class ObligationType(models.Model):
     RECURRENCE_CHOICES = [

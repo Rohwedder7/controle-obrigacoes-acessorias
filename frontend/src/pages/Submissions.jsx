@@ -356,7 +356,7 @@ export default function Submissions() {
                           <option value="">Selecione a empresa</option>
                           {companies.map(company => (
                             <option key={company.id} value={company.id}>
-                              {company.name} ({company.cnpj})
+                              [{company.code}] {company.name} ({company.cnpj})
                             </option>
                           ))}
                         </select>
@@ -655,7 +655,7 @@ export default function Submissions() {
                         >
                           <option value="">Todas as empresas</option>
                           {companies.map(company => (
-                            <option key={company.id} value={company.id}>{company.name}</option>
+                            <option key={company.id} value={company.id}>[{company.code}] {company.name}</option>
                           ))}
                         </select>
                       </div>
@@ -733,9 +733,19 @@ export default function Submissions() {
                                     </span>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                      Entregue
-                                    </span>
+                                    {delivery.delivery_status === 'entregue' ? (
+                                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                        Entregue
+                                      </span>
+                                    ) : delivery.delivery_status === 'atrasada' ? (
+                                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                        Atrasada
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                        Pendente de Aprovação
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <div className="flex items-center gap-1">

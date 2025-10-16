@@ -12,6 +12,37 @@ import {
 } from '../api'
 import { CheckCircle, XCircle, AlertCircle, Download, Clock, FileText, X } from 'lucide-react'
 
+// Função helper para obter cor do status
+const getStatusDotColor = (approvalStatus) => {
+  switch (approvalStatus) {
+    case 'approved':
+      return 'bg-green-500'
+    case 'needs_revision':
+      return 'bg-yellow-500'
+    case 'rejected':
+      return 'bg-red-500'
+    case 'pending_review':
+      return 'bg-gray-400'
+    default:
+      return 'bg-gray-400'
+  }
+}
+
+// Função helper para formatar CNPJ
+const formatCNPJ = (cnpj) => {
+  if (!cnpj) return ''
+  // Remove caracteres não numéricos
+  const cleaned = cnpj.replace(/\D/g, '')
+  // Aplica máscara XX.XXX.XXX/XXXX-XX
+  if (cleaned.length === 14) {
+    return cleaned.replace(
+      /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+      '$1.$2.$3/$4-$5'
+    )
+  }
+  return cnpj
+}
+
 export default function Approvals() {
   const [loading, setLoading] = useState(false)
   const [pendingApprovals, setPendingApprovals] = useState([])
@@ -30,7 +61,8 @@ export default function Approvals() {
     obligation_type: '',
     search: '',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    status: ''  // Filtro de status (vazio = todas)
   })
 
   useEffect(() => {
@@ -155,8 +187,8 @@ export default function Approvals() {
       <div className="p-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Fila de Aprovação</h1>
-          <p className="text-gray-600">Revise e aprove as entregas pendentes</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Aprovações</h1>
+          <p className="text-gray-600">Visualize e gerencie todas as entregas do sistema</p>
         </div>
 
         {/* Mensagem de feedback */}
@@ -198,7 +230,7 @@ export default function Approvals() {
                 <option value="">Todas as empresas</option>
                 {companies.map((company) => (
                   <option key={company.id} value={company.id}>
-                    {company.name}
+                    [{company.code}] {company.name}
                   </option>
                 ))}
               </select>
@@ -219,11 +251,26 @@ export default function Approvals() {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todos os status</option>
+                <option value="pending_review">Pendente de Revisão</option>
+                <option value="approved">Aprovada</option>
+                <option value="rejected">Recusada</option>
+                <option value="needs_revision">Necessita Revisão</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex gap-4 mt-4">
             <button
-              onClick={() => setFilters({ company: '', obligation_type: '', search: '', start_date: '', end_date: '' })}
+              onClick={() => setFilters({ company: '', obligation_type: '', search: '', start_date: '', end_date: '', status: '' })}
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
             >
               Limpar Filtros
@@ -232,11 +279,11 @@ export default function Approvals() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Lista de pendentes */}
+          {/* Lista de entregas */}
           <div className="bg-white rounded-lg shadow-lg">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-900">
-                Pendentes ({pendingApprovals.length})
+                Entregas ({pendingApprovals.length})
               </h2>
             </div>
 
@@ -257,11 +304,23 @@ export default function Approvals() {
                     <div
                       key={submission.id}
                       onClick={() => selectSubmission(submission)}
-                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors relative ${
                         selectedSubmission?.id === submission.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
                       }`}
                     >
-                      <div className="font-semibold text-gray-900">{submission.company.name}</div>
+                      {/* Bolinha de status no canto superior direito */}
+                      <div className={`absolute top-3 right-3 w-3 h-3 rounded-full ${getStatusDotColor(submission.approval_status)} shadow-sm`} 
+                           title={
+                             submission.approval_status === 'approved' ? 'Aprovada' :
+                             submission.approval_status === 'needs_revision' ? 'Necessita Revisão' :
+                             submission.approval_status === 'rejected' ? 'Recusada' :
+                             'Pendente de Revisão'
+                           }>
+                      </div>
+                      
+                      <div className="font-semibold text-gray-900">
+                        {submission.company.name} - {formatCNPJ(submission.company.cnpj)}
+                      </div>
                       <div className="text-sm text-gray-600 mt-1">
                         {submission.obligation.name} • {submission.obligation.state}
                       </div>
@@ -306,10 +365,10 @@ export default function Approvals() {
                     <h3 className="text-lg font-semibold mb-3">Informações</h3>
                     <div className="space-y-2 text-sm">
                       <div>
-                        <span className="font-medium">Empresa:</span> {selectedSubmission.company.name}
+                        <span className="font-medium">Empresa:</span> {selectedSubmission.company.code} - {selectedSubmission.company.name}
                       </div>
                       <div>
-                        <span className="font-medium">CNPJ:</span> {selectedSubmission.company.cnpj}
+                        <span className="font-medium">CNPJ:</span> {formatCNPJ(selectedSubmission.company.cnpj)}
                       </div>
                       <div>
                         <span className="font-medium">Obrigação:</span> {selectedSubmission.obligation.name}

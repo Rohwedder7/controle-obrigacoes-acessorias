@@ -1,0 +1,124 @@
+================================================================================
+                    ⚠️ PROBLEMA IDENTIFICADO - TEMPLATE ANTIGO
+================================================================================
+
+O template que você baixou não tem a coluna "Código" como primeira coluna.
+Isso significa que o sistema está servindo o template antigo.
+
+================================================================================
+                    🔧 SOLUÇÃO - SIGA ESTES PASSOS
+================================================================================
+
+PASSO 1: REINICIAR O SERVIDOR DJANGO
+
+1. Pare o servidor Django (Ctrl+C no terminal onde está rodando)
+2. Inicie novamente:
+   cd backend
+   python manage.py runserver
+
+PASSO 2: LIMPAR CACHE DO NAVEGADOR
+
+1. Pressione Ctrl+Shift+Del
+2. Selecione "Imagens e arquivos em cache"
+3. Clique em "Limpar dados"
+
+OU
+
+1. Pressione Ctrl+F5 na página para forçar recarregamento
+
+PASSO 3: BAIXAR O TEMPLATE NOVAMENTE
+
+1. Acesse http://localhost:5173
+2. Vá em "Empresas"
+3. Clique em "Baixar Template"
+4. Verifique se agora tem a coluna "Código"
+
+================================================================================
+                    📋 VERIFICAÇÃO DO TEMPLATE CORRETO
+================================================================================
+
+O template de empresas DEVE ter estas colunas (nesta ordem):
+
+1. Código (obrigatório)
+2. Razão Social (obrigatório)
+3. CNPJ (opcional)
+4. Nome Fantasia (opcional)
+5. E-mail (opcional)
+6. Telefone (opcional)
+7. Endereço (opcional)
+8. Responsável (opcional)
+
+Se o template que você baixar NÃO tiver a coluna "Código" como primeira,
+significa que o servidor não foi reiniciado ou há cache.
+
+================================================================================
+                    🎯 TEMPLATE CORRETO
+================================================================================
+
+┌──────────┬──────────────────────┬──────────────────┬─────────────────┐
+│ Código   │ Razão Social         │ CNPJ             │ Nome Fantasia   │
+├──────────┼──────────────────────┼──────────────────┼─────────────────┤
+│ EMP001   │ Empresa Exemplo Ltda │ 12345678000190   │ Exemplo         │
+└──────────┴──────────────────────┴──────────────────┴─────────────────┘
+
+PRIMEIRA COLUNA DEVE SER: "Código"
+SEGUNDA COLUNA DEVE SER: "Razão Social"
+
+================================================================================
+                    🎯 TEMPLATE ANTIGO (INCORRETO)
+================================================================================
+
+┌──────────────────────┬──────────────────┬─────────────────┬──────────┐
+│ Nome da Empresa      │ CNPJ             │ Nome Fantasia   │ E-mail   │
+├──────────────────────┼──────────────────┼─────────────────┼──────────┤
+│ Empresa Exemplo Ltda │ 12345678000190   │ Exemplo         │ ...      │
+└──────────────────────┴──────────────────┴─────────────────┴──────────┘
+
+PRIMEIRA COLUNA É: "Nome da Empresa" (INCORRETO)
+NÃO TEM A COLUNA "Código" (INCORRETO)
+
+================================================================================
+                    🔄 ALTERNATIVA - BAIXAR DIRETO DO ARQUIVO
+================================================================================
+
+Se após reiniciar o servidor e limpar o cache o problema persistir,
+baixe o template diretamente do sistema de arquivos:
+
+WINDOWS:
+C:\Users\willr\OneDrive\Documentos\Controle de Obrigações Acessórias\backend\media\templates\
+
+Copie o arquivo:
+template_empresas.xlsx
+
+================================================================================
+                    ✅ CHECKLIST
+================================================================================
+
+- [ ] Servidor Django reiniciado
+- [ ] Cache do navegador limpo
+- [ ] Template baixado novamente
+- [ ] Primeira coluna é "Código" ✓
+- [ ] Segunda coluna é "Razão Social" ✓
+- [ ] Terceira coluna é "CNPJ" ✓
+
+================================================================================
+                    📞 SE O PROBLEMA PERSISTIR
+================================================================================
+
+1. Verifique se o arquivo template_empresas.xlsx existe em:
+   backend/media/templates/
+
+2. Abra o arquivo diretamente no Excel para verificar
+
+3. Se o arquivo estiver correto no servidor mas errado no download,
+   o problema é cache do navegador - limpe novamente
+
+4. Se o arquivo estiver errado no servidor, execute:
+   python atualizar_templates_final.py
+
+================================================================================
+
+                    SIGA OS PASSOS ACIMA E O PROBLEMA SERÁ RESOLVIDO! ✅
+
+================================================================================
+
